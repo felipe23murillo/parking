@@ -1,0 +1,491 @@
+/* styles.css - Estilos personalizados del sistema de parqueaderos */
+
+/* ============================================
+   Paleta de Colores
+   ============================================ */
+:root {
+    --primary-color: #09637E;
+    --secondary-color: #088395;
+    --tertiary-color: #7AB2B2;
+    --light-color: #EBF4F6;
+    --dark-color: #063e4f;
+    --success-color: #28a745;
+    --danger-color: #dc3545;
+    --warning-color: #ffc107;
+    --info-color: #17a2b8;
+}
+
+/* ============================================
+   Estilos Globales
+   ============================================ */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--light-color);
+    overflow-x: hidden;
+}
+
+/* ============================================
+   Página de Login
+   ============================================ */
+.login-page {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+    min-height: 100vh;
+}
+
+.login-page .card {
+    border-radius: 15px;
+    animation: slideUp 0.5s ease;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.login-page .text-primary {
+    color: var(--primary-color) !important;
+}
+
+.login-page .btn-primary {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.login-page .btn-primary:hover {
+    background-color: var(--secondary-color);
+    border-color: var(--secondary-color);
+}
+
+/* ============================================
+   Navbar
+   ============================================ */
+.navbar {
+    background-color: var(--primary-color) !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.navbar-brand {
+    font-weight: bold;
+    font-size: 1.3rem;
+}
+
+.navbar .btn-primary {
+    background-color: transparent;
+    border: none;
+    font-size: 1.5rem;
+}
+
+.navbar .btn-primary:hover {
+    background-color: var(--secondary-color);
+}
+
+/* ============================================
+   Sidebar
+   ============================================ */
+.sidebar {
+    min-width: 250px;
+    max-width: 250px;
+    background-color: var(--dark-color);
+    color: white;
+    min-height: calc(100vh - 56px);
+    transition: all 0.3s;
+    position: relative;
+}
+
+.sidebar-header {
+    padding: 20px;
+    background-color: var(--primary-color);
+    text-align: center;
+    border-bottom: 2px solid var(--secondary-color);
+}
+
+.sidebar-header h4 {
+    margin: 0;
+    font-size: 1.2rem;
+}
+
+.sidebar .nav-link {
+    color: rgba(255, 255, 255, 0.8);
+    padding: 15px 20px;
+    transition: all 0.3s;
+    border-left: 3px solid transparent;
+}
+
+.sidebar .nav-link:hover {
+    color: white;
+    background-color: var(--primary-color);
+    border-left-color: var(--tertiary-color);
+}
+
+.sidebar .nav-link.active {
+    color: white;
+    background-color: var(--secondary-color);
+    border-left-color: var(--light-color);
+}
+
+.sidebar .nav-link i {
+    margin-right: 10px;
+    font-size: 1.1rem;
+}
+
+/* Sidebar responsive */
+@media (max-width: 768px) {
+    .sidebar {
+        margin-left: -250px;
+        position: absolute;
+        z-index: 1000;
+    }
+    
+    .sidebar.active {
+        margin-left: 0;
+    }
+}
+
+/* ============================================
+   Main Content
+   ============================================ */
+.main-content {
+    flex: 1;
+    background-color: var(--light-color);
+    min-height: calc(100vh - 56px);
+    padding: 0;
+}
+
+/* ============================================
+   Cards y Estadísticas
+   ============================================ */
+.card {
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+}
+
+.card-header {
+    border-radius: 10px 10px 0 0 !important;
+    border-bottom: none;
+    font-weight: 600;
+}
+
+.stat-card {
+    border-left: 4px solid var(--primary-color);
+}
+
+.stat-card-carro {
+    border-left-color: var(--primary-color);
+}
+
+.stat-card-moto {
+    border-left-color: var(--secondary-color);
+}
+
+.stat-card-camion {
+    border-left-color: var(--tertiary-color);
+}
+
+.stat-card-bicicleta {
+    border-left-color: var(--success-color);
+}
+
+.stat-icon {
+    width: 60px;
+    height: 60px;
+    background-color: var(--light-color);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    color: var(--primary-color);
+}
+
+.card-total {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+    color: white;
+}
+
+/* ============================================
+   Botones Personalizados
+   ============================================ */
+.btn-primary {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.btn-primary:hover,
+.btn-primary:focus {
+    background-color: var(--secondary-color);
+    border-color: var(--secondary-color);
+}
+
+.btn-outline-primary {
+    color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    color: white;
+}
+
+/* ============================================
+   Tablas
+   ============================================ */
+.table {
+    background-color: white;
+}
+
+.table thead {
+    background-color: var(--light-color);
+    color: var(--primary-color);
+}
+
+.table-hover tbody tr:hover {
+    background-color: var(--light-color);
+}
+
+/* ============================================
+   Badges
+   ============================================ */
+.badge {
+    font-weight: 500;
+    padding: 0.5em 0.8em;
+}
+
+.bg-primary {
+    background-color: var(--primary-color) !important;
+}
+
+.bg-secondary {
+    background-color: var(--secondary-color) !important;
+}
+
+.bg-info {
+    background-color: var(--tertiary-color) !important;
+}
+
+/* ============================================
+   Formularios
+   ============================================ */
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--secondary-color);
+    box-shadow: 0 0 0 0.25rem rgba(8, 131, 149, 0.25);
+}
+
+/* ============================================
+   Espacios Grid
+   ============================================ */
+.espacios-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: 10px;
+    padding: 10px 0;
+}
+
+.espacio-item {
+    text-align: center;
+}
+
+.espacio-item .badge {
+    font-size: 0.85rem;
+    padding: 10px 5px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.espacio-item .badge:hover {
+    transform: scale(1.05);
+}
+
+/* ============================================
+   Breadcrumbs
+   ============================================ */
+.breadcrumb {
+    background-color: transparent;
+    padding: 0;
+    margin-top: 10px;
+}
+
+.breadcrumb-item a {
+    color: var(--primary-color);
+    text-decoration: none;
+}
+
+.breadcrumb-item a:hover {
+    color: var(--secondary-color);
+    text-decoration: underline;
+}
+
+/* ============================================
+   Alertas
+   ============================================ */
+.alert {
+    border-radius: 8px;
+    border: none;
+}
+
+/* ============================================
+   Animaciones
+   ============================================ */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.fade-in {
+    animation: fadeIn 0.5s ease;
+}
+
+/* ============================================
+   Scrollbar Personalizado
+   ============================================ */
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--light-color);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--tertiary-color);
+    border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--secondary-color);
+}
+
+/* ============================================
+   Utilidades
+   ============================================ */
+.text-primary {
+    color: var(--primary-color) !important;
+}
+
+.bg-light-custom {
+    background-color: var(--light-color) !important;
+}
+
+.shadow-custom {
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+/* ============================================
+   Responsive
+   ============================================ */
+@media (max-width: 992px) {
+    .stat-card .card-body {
+        padding: 1rem;
+    }
+    
+    .stat-icon {
+        width: 50px;
+        height: 50px;
+        font-size: 1.5rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .navbar-brand {
+        font-size: 1rem;
+    }
+    
+    .espacios-grid {
+        grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+        gap: 5px;
+    }
+}
+
+/* ============================================
+   Impresión
+   ============================================ */
+@media print {
+    .navbar,
+    .sidebar,
+    .btn,
+    .breadcrumb {
+        display: none !important;
+    }
+    
+    .main-content {
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    
+    .card {
+        box-shadow: none;
+        border: 1px solid #ddd;
+    }
+}
+
+/* ============================================
+   Estados de carga
+   ============================================ */
+.loading {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(0, 0, 0, 0.1);
+    border-radius: 50%;
+    border-top-color: var(--primary-color);
+    animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ============================================
+   Tooltips y Popovers
+   ============================================ */
+.tooltip-inner {
+    background-color: var(--primary-color);
+}
+
+.tooltip.bs-tooltip-top .tooltip-arrow::before {
+    border-top-color: var(--primary-color);
+}
+
+.tooltip.bs-tooltip-bottom .tooltip-arrow::before {
+    border-bottom-color: var(--primary-color);
+}
+
+/* ============================================
+   Transiciones suaves
+   ============================================ */
+* {
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+button,
+a,
+input,
+select,
+textarea {
+    transition: all 0.3s ease;
+}

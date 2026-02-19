@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tarifas - Sistema de Parqueadero</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container-fluid">
+            <button class="btn btn-primary" id="sidebarToggle">
+                <i class="bi bi-list"></i>
+            </button>
+            <a class="navbar-brand ms-3" href="dashboard.html">
+                <i class="bi bi-car-front-fill"></i> Sistema de Parqueadero
+            </a>
+            <div class="ms-auto">
+                <span class="navbar-text text-white me-3">
+                    <i class="bi bi-person-circle"></i> <span id="userName">Admin</span>
+                </span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="d-flex">
+        <!-- Sidebar -->
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h4><i class="bi bi-speedometer2"></i> Menú</h4>
+            </div>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link" href="dashboard.html">
+                        <i class="bi bi-speedometer2"></i> Dashboard
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="ingreso.html">
+                        <i class="bi bi-arrow-down-circle"></i> Ingreso de Vehículo
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="salida.html">
+                        <i class="bi bi-arrow-up-circle"></i> Salida de Vehículo
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="vehiculos.html">
+                        <i class="bi bi-car-front"></i> Vehículos Parqueados
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="historial.html">
+                        <i class="bi bi-clock-history"></i> Historial
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link active" href="tarifas.html">
+                        <i class="bi bi-cash-coin"></i> Tarifas
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="espacios.html">
+                        <i class="bi bi-grid-3x3"></i> Espacios
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="configuracion.html">
+                        <i class="bi bi-gear"></i> Configuración
+                    </a>
+                </li>
+                <li class="nav-item mt-3">
+                    <a class="nav-link text-danger" href="#" id="logoutBtn">
+                        <i class="bi bi-box-arrow-right"></i> Cerrar Sesión
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="container-fluid py-4">
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <h1><i class="bi bi-cash-coin"></i> Gestión de Tarifas</h1>
+                        <nav aria-label="breadcrumb">
+                            <ol class="breadcrumb">
+                                <li class="breadcrumb-item"><a href="dashboard.html">Dashboard</a></li>
+                                <li class="breadcrumb-item active">Tarifas</li>
+                            </ol>
+                        </nav>
+                    </div>
+                </div>
+
+                <div id="alertContainer"></div>
+
+                <!-- Tarifas actuales -->
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card mb-4">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0"><i class="bi bi-tag"></i> Tarifas por Tipo de Vehículo</h5>
+                            </div>
+                            <div class="card-body">
+                                <div id="tarifasActuales">
+                                    <p class="text-muted">Cargando tarifas...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header bg-info text-white">
+                                <h5 class="mb-0"><i class="bi bi-pencil"></i> Editar Tarifas</h5>
+                            </div>
+                            <div class="card-body">
+                                <form id="tarifasForm">
+                                    <div class="mb-3">
+                                        <label for="tipoVehiculo" class="form-label">Tipo de Vehículo</label>
+                                        <select class="form-select" id="tipoVehiculo" required>
+                                            <option value="">Seleccione un tipo</option>
+                                            <option value="Carro">🚗 Carro</option>
+                                            <option value="Moto">🏍 Moto</option>
+                                            <option value="Camión">🚚 Camión</option>
+                                            <option value="Bicicleta">🚴 Bicicleta</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="precioHora" class="form-label">Precio por Hora (COP)</label>
+                                        <input type="number" class="form-control" id="precioHora" min="0" step="100" placeholder="3000">
+                                        <div class="form-text">Precio que se cobrará por cada hora de parqueo</div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="precioFijo" class="form-label">Precio Fijo (COP) - Opcional</label>
+                                        <input type="number" class="form-control" id="precioFijo" min="0" step="100" placeholder="0">
+                                        <div class="form-text">Si se establece, se cobrará este valor fijo sin importar el tiempo. Dejar en 0 para cobrar por hora</div>
+                                    </div>
+
+                                    <div class="d-grid">
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="bi bi-save"></i> Guardar Tarifa
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Información adicional -->
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0"><i class="bi bi-info-circle"></i> Información sobre Tarifas</h5>
+                            </div>
+                            <div class="card-body">
+                                <h6>Cómo funcionan las tarifas:</h6>
+                                <ul>
+                                    <li><strong>Precio por Hora:</strong> Se cobra por cada hora completa que el vehículo permanezca en el parqueadero. Si un vehículo permanece 2 horas y 30 minutos, se cobrarán 3 horas completas.</li>
+                                    <li><strong>Precio Fijo:</strong> Si se establece un precio fijo, se cobrará ese valor sin importar el tiempo de permanencia. Útil para tarifas especiales o promociones.</li>
+                                    <li><strong>Cálculo Automático:</strong> El sistema calcula automáticamente el valor a pagar cuando se registra la salida del vehículo.</li>
+                                    <li><strong>Mínimo de Cobro:</strong> Se cobra mínimo 1 hora, incluso si el vehículo permanece menos tiempo.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap 5 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Custom JS -->
+    <script src="js/storage.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/parking.js"></script>
+    <script src="js/tarifas.js"></script>
+</body>
+</html>
