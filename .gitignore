@@ -11,3 +11,6 @@ Thumbs.db
 # Archivos temporales
 *.tmp
 *.log
+
+# Claude Code
+.claude/
