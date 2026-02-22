@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Skill(claude-developer-platform)",
+      "Skill(claude-developer-platform:*)",
+      "Bash(\"C:/Users/Andres Murillo/Desktop/software_park/patch_chatbot.ps1\":*)",
+      "Bash(powershell.exe -ExecutionPolicy Bypass -File \"C:\\\\Users\\\\Andres Murillo\\\\Desktop\\\\software_park\\\\patch_chatbot.ps1\")",
+      "Bash(\"C:/Users/Andres Murillo/Desktop/software_park/verify_chatbot.ps1\":*)",
+      "Bash(powershell.exe -ExecutionPolicy Bypass -File \"C:\\\\Users\\\\Andres Murillo\\\\Desktop\\\\software_park\\\\verify_chatbot.ps1\")",
+      "Bash(\"C:/Users/Andres Murillo/Desktop/software_park/verify2_chatbot.ps1\":*)",
+      "Bash(powershell.exe -ExecutionPolicy Bypass -File \"C:\\\\Users\\\\Andres Murillo\\\\Desktop\\\\software_park\\\\verify2_chatbot.ps1\")",
+      "Bash(\"C:/Users/Andres Murillo/Desktop/software_park/verify3_chatbot.ps1\":*)",
+      "Bash(powershell.exe -ExecutionPolicy Bypass -File \"C:\\\\Users\\\\Andres Murillo\\\\Desktop\\\\software_park\\\\verify3_chatbot.ps1\")"
+    ]
+  }
+}
