@@ -64,13 +64,16 @@ function registrarIngreso(placa, tipo, espacio) {
     }
 
     // Crear registro del vehículo
+    const usuarioActual = typeof obtenerUsuarioActual === 'function' ? obtenerUsuarioActual() : null;
     const vehiculo = {
         id: Date.now(),
         placa: placa.toUpperCase(),
         tipo: tipo,
         espacio: espacio,
         fechaIngreso: new Date().toISOString(),
-        horaIngreso: new Date().toLocaleTimeString('es-CO')
+        horaIngreso: new Date().toLocaleTimeString('es-CO'),
+        registradoPor: usuarioActual ? usuarioActual.nombre : 'Sin usuario',
+        usuarioRegistro: usuarioActual ? usuarioActual.usuario : null
     };
 
     // Guardar en vehiculos activos

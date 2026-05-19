@@ -11,7 +11,7 @@ function validarCredenciales(usuario, password) {
     const usuarios = obtenerDatos('usuarios');
     if (!usuarios) return null;
 
-    return usuarios.find(u => u.usuario === usuario && u.password === password);
+    return usuarios.find(u => u.usuario === usuario && u.password === password && u.estado !== 'inactivo');
 }
 
 // Iniciar sesión

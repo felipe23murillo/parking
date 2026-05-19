@@ -39,11 +39,13 @@ function cargarEstadisticas() {
     const vehiculosActivos = obtenerDatos('vehiculosActivos') || [];
     const historial = obtenerDatos('historial') || [];
     const tarifas = obtenerDatos('tarifas') || [];
+    const usuarios = obtenerDatos('usuarios') || [];
     const espacios = obtenerDatos('espacios') || {};
 
     document.getElementById('statActivos').textContent = vehiculosActivos.length;
     document.getElementById('statHistorial').textContent = historial.length;
     document.getElementById('statTarifas').textContent = tarifas.length;
+    document.getElementById('statUsuarios').textContent = usuarios.length;
 
     let totalEspacios = 0;
     Object.values(espacios).forEach(tipo => {
@@ -58,6 +60,7 @@ function exportarDatos() {
         vehiculosActivos: obtenerDatos('vehiculosActivos'),
         historial: obtenerDatos('historial'),
         tarifas: obtenerDatos('tarifas'),
+        usuarios: obtenerDatos('usuarios'),
         espacios: obtenerDatos('espacios'),
         configuracion: obtenerDatos('configuracion'),
         fechaExportacion: new Date().toISOString()

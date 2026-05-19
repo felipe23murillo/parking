@@ -15,7 +15,7 @@ function mostrarHistorial(registros) {
     const tbody = document.getElementById('historialTabla');
 
     if (registros.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No hay registros en el historial</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No hay registros en el historial</td></tr>';
         return;
     }
 
@@ -28,6 +28,7 @@ function mostrarHistorial(registros) {
             <td><i class="bi ${obtenerIconoVehiculo(r.tipo)}"></i> ${r.tipo}</td>
             <td><span class="badge bg-secondary">${r.espacio}</span></td>
             <td><small>${new Date(r.fechaIngreso).toLocaleDateString('es-CO')} ${r.horaIngreso}</small></td>
+            <td>${r.registradoPor || 'Sin usuario'}</td>
             <td><small>${new Date(r.fechaSalida).toLocaleDateString('es-CO')} ${r.horaSalida}</small></td>
             <td><span class="badge bg-info">${r.tiempoEstadia}</span></td>
             <td><strong class="text-success">${formatearMoneda(r.valorPagado)}</strong></td>
@@ -92,10 +93,10 @@ function exportarHistorial() {
     }
 
     // Crear CSV
-    let csv = 'Placa,Tipo,Espacio,Fecha Ingreso,Hora Ingreso,Fecha Salida,Hora Salida,Tiempo,Valor\n';
+    let csv = 'Placa,Tipo,Espacio,Fecha Ingreso,Hora Ingreso,Registrado Por,Fecha Salida,Hora Salida,Tiempo,Valor\n';
     
     historial.forEach(r => {
-        csv += `${r.placa},${r.tipo},${r.espacio},${new Date(r.fechaIngreso).toLocaleDateString('es-CO')},${r.horaIngreso},${new Date(r.fechaSalida).toLocaleDateString('es-CO')},${r.horaSalida},${r.tiempoEstadia},${r.valorPagado}\n`;
+        csv += `${r.placa},${r.tipo},${r.espacio},${new Date(r.fechaIngreso).toLocaleDateString('es-CO')},${r.horaIngreso},${r.registradoPor || 'Sin usuario'},${new Date(r.fechaSalida).toLocaleDateString('es-CO')},${r.horaSalida},${r.tiempoEstadia},${r.valorPagado}\n`;
     });
 
     // Descargar archivo

@@ -18,7 +18,7 @@ function mostrarVehiculos(vehiculos) {
     const tbody = document.getElementById('vehiculosTabla');
 
     if (vehiculos.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No hay vehículos parqueados</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No hay vehículos parqueados</td></tr>';
         return;
     }
 
@@ -31,6 +31,7 @@ function mostrarVehiculos(vehiculos) {
                 <td><span class="badge bg-primary">${v.espacio}</span></td>
                 <td>${new Date(v.fechaIngreso).toLocaleDateString('es-CO')}</td>
                 <td>${v.horaIngreso}</td>
+                <td>${v.registradoPor || 'Sin usuario'}</td>
                 <td><span class="badge bg-info">${tiempo.texto}</span></td>
                 <td>
                     <a href="salida.html" class="btn btn-sm btn-success" title="Registrar salida">

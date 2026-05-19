@@ -9,10 +9,14 @@ function inicializarDatos() {
                 usuario: 'admin',
                 password: 'admin123',
                 nombre: 'Administrador',
-                rol: 'admin'
+                rol: 'admin',
+                estado: 'activo',
+                fechaCreacion: new Date().toISOString()
             }
         ];
         guardarDatos('usuarios', usuarios);
+    } else {
+        migrarUsuarios();
     }
 
     if (!localStorage.getItem('vehiculosActivos')) {
@@ -67,6 +71,37 @@ function inicializarDatos() {
             email: 'info@parqueadero.com'
         };
         guardarDatos('configuracion', configuracion);
+    }
+}
+
+// Completar datos faltantes en usuarios creados con versiones anteriores
+function migrarUsuarios() {
+    const usuarios = obtenerDatos('usuarios') || [];
+    let huboCambios = false;
+
+    const usuariosActualizados = usuarios.map(usuario => {
+        const usuarioActualizado = { ...usuario };
+
+        if (!usuarioActualizado.estado) {
+            usuarioActualizado.estado = 'activo';
+            huboCambios = true;
+        }
+
+        if (!usuarioActualizado.fechaCreacion) {
+            usuarioActualizado.fechaCreacion = new Date().toISOString();
+            huboCambios = true;
+        }
+
+        if (!usuarioActualizado.rol) {
+            usuarioActualizado.rol = 'operador';
+            huboCambios = true;
+        }
+
+        return usuarioActualizado;
+    });
+
+    if (huboCambios) {
+        guardarDatos('usuarios', usuariosActualizados);
     }
 }
 
