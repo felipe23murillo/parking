@@ -45,9 +45,10 @@ function mostrarTarifas() {
     }
 
     container.innerHTML = '<small>' + tarifas.map(t => {
-        const precio = t.precioFijo > 0 ? 
-            `Precio fijo: ${formatearMoneda(t.precioFijo)}` :
-            `${formatearMoneda(t.precioHora)}/hora`;
+        const modalidad = t.modalidad || (Number(t.precioFijo) > 0 ? 'fijo' : 'hora');
+        const precio = modalidad === 'fijo' ? 
+            `Precio fijo: ${formatearMoneda(Number(t.precioFijo) || 0)}` :
+            `${formatearMoneda(Number(t.precioHora) || 0)}/hora`;
         return `<strong>${t.tipo}:</strong> ${precio}`;
     }).join('<br>') + '</small>';
 }

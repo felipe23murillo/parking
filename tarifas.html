@@ -124,7 +124,7 @@
                         </div>
                     </div>
 
-                    <div class="col-md-6">
+                    <div class="col-md-6 d-none" id="tarifaEditorContainer">
                         <div class="card">
                             <div class="card-header bg-info text-white">
                                 <h5 class="mb-0"><i class="bi bi-pencil"></i> Editar Tarifas</h5>
@@ -132,26 +132,56 @@
                             <div class="card-body">
                                 <form id="tarifasForm">
                                     <div class="mb-3">
-                                        <label for="tipoVehiculo" class="form-label">Tipo de Vehículo</label>
-                                        <select class="form-select" id="tipoVehiculo" required>
-                                            <option value="">Seleccione un tipo</option>
-                                            <option value="Carro">🚗 Carro</option>
-                                            <option value="Moto">🏍 Moto</option>
-                                            <option value="Camión">🚚 Camión</option>
-                                            <option value="Bicicleta">🚴 Bicicleta</option>
-                                        </select>
+                                        <label class="form-label">Tipo de Vehículo</label>
+                                        <input type="hidden" id="tipoVehiculo" required>
+                                        <div class="vehicle-type-grid" role="radiogroup" aria-label="Tipo de vehículo">
+                                            <input type="radio" class="btn-check" name="tipoVehiculoOption" id="tipoCarro" value="Carro" autocomplete="off">
+                                            <label class="btn btn-outline-primary vehicle-type-option" for="tipoCarro">
+                                                <i class="bi bi-car-front-fill"></i> Carro
+                                            </label>
+
+                                            <input type="radio" class="btn-check" name="tipoVehiculoOption" id="tipoMoto" value="Moto" autocomplete="off">
+                                            <label class="btn btn-outline-primary vehicle-type-option" for="tipoMoto">
+                                                <i class="bi bi-scooter"></i> Moto
+                                            </label>
+
+                                            <input type="radio" class="btn-check" name="tipoVehiculoOption" id="tipoCamion" value="Camión" autocomplete="off">
+                                            <label class="btn btn-outline-primary vehicle-type-option" for="tipoCamion">
+                                                <i class="bi bi-truck"></i> Camión
+                                            </label>
+
+                                            <input type="radio" class="btn-check" name="tipoVehiculoOption" id="tipoBicicleta" value="Bicicleta" autocomplete="off">
+                                            <label class="btn btn-outline-primary vehicle-type-option" for="tipoBicicleta">
+                                                <i class="bi bi-bicycle"></i> Bicicleta
+                                            </label>
+                                        </div>
                                     </div>
 
                                     <div class="mb-3">
-                                        <label for="precioHora" class="form-label">Precio por Hora (COP)</label>
+                                        <label class="form-label">Modalidad de cobro</label>
+                                        <div class="tarifa-mode-group" role="radiogroup" aria-label="Modalidad de cobro">
+                                            <input type="radio" class="btn-check" name="modalidadTarifa" id="modalidadHora" value="hora" autocomplete="off" checked>
+                                            <label class="btn btn-outline-primary" for="modalidadHora">
+                                                <i class="bi bi-clock"></i> Por hora
+                                            </label>
+
+                                            <input type="radio" class="btn-check" name="modalidadTarifa" id="modalidadFijo" value="fijo" autocomplete="off">
+                                            <label class="btn btn-outline-success" for="modalidadFijo">
+                                                <i class="bi bi-check2-square"></i> Precio fijo
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-3" id="precioHoraGroup">
+                                        <label for="precioHora" class="form-label">Valor por Hora (COP)</label>
                                         <input type="number" class="form-control" id="precioHora" min="0" step="100" placeholder="3000">
                                         <div class="form-text">Precio que se cobrará por cada hora de parqueo</div>
                                     </div>
 
-                                    <div class="mb-3">
-                                        <label for="precioFijo" class="form-label">Precio Fijo (COP) - Opcional</label>
+                                    <div class="mb-3" id="precioFijoGroup">
+                                        <label for="precioFijo" class="form-label">Valor Fijo (COP)</label>
                                         <input type="number" class="form-control" id="precioFijo" min="0" step="100" placeholder="0">
-                                        <div class="form-text">Si se establece, se cobrará este valor fijo sin importar el tiempo. Dejar en 0 para cobrar por hora</div>
+                                        <div class="form-text">Se cobrará este valor sin importar el tiempo de permanencia</div>
                                     </div>
 
                                     <div class="d-grid">

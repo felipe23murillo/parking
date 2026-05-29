@@ -117,14 +117,15 @@ function calcularValorAPagar(tipo, fechaIngreso) {
     if (!tarifa) return 0;
 
     const tiempo = calcularTiempoEstadia(fechaIngreso);
+    const modalidad = tarifa.modalidad || (Number(tarifa.precioFijo) > 0 ? 'fijo' : 'hora');
     
-    // Si hay precio fijo, usar ese
-    if (tarifa.precioFijo > 0) {
-        return tarifa.precioFijo;
+    // Si la tarifa está configurada como precio fijo, usar ese valor.
+    if (modalidad === 'fijo') {
+        return Number(tarifa.precioFijo) || 0;
     }
 
     // Calcular por hora
-    return tarifa.precioHora * tiempo.totalHoras;
+    return (Number(tarifa.precioHora) || 0) * tiempo.totalHoras;
 }
 
 // Registrar salida de vehículo

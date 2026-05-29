@@ -454,9 +454,10 @@ class ParkingChatbot {
         let r = `💰 **Tarifas del Parqueadero:**\n\n`;
         tarifas.forEach(t => {
             const icono = iconos[t.tipo] || '🚘';
-            const precio = t.precioFijo > 0
-                ? `$${t.precioFijo.toLocaleString('es-CO')} (fijo)`
-                : `$${t.precioHora.toLocaleString('es-CO')} / hora`;
+            const modalidad = t.modalidad || (Number(t.precioFijo) > 0 ? 'fijo' : 'hora');
+            const precio = modalidad === 'fijo'
+                ? `$${(Number(t.precioFijo) || 0).toLocaleString('es-CO')} (fijo)`
+                : `$${(Number(t.precioHora) || 0).toLocaleString('es-CO')} / hora`;
             r += `• ${icono} **${t.tipo}:** ${precio}\n`;
         });
         return r;
@@ -522,9 +523,10 @@ class ParkingChatbot {
             const tarifa = tarifas.find(t => t.tipo === activo.tipo);
             if (tarifa) {
                 const totalHoras = Math.max(1, Math.ceil(diffMs / 3600000));
-                const cobro = tarifa.precioFijo > 0
-                    ? tarifa.precioFijo
-                    : totalHoras * tarifa.precioHora;
+                const modalidad = tarifa.modalidad || (Number(tarifa.precioFijo) > 0 ? 'fijo' : 'hora');
+                const cobro = modalidad === 'fijo'
+                    ? Number(tarifa.precioFijo) || 0
+                    : totalHoras * (Number(tarifa.precioHora) || 0);
                 r += `• Cobro estimado: **$${cobro.toLocaleString('es-CO')}**\n`;
             }
         }

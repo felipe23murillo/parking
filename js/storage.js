@@ -29,12 +29,14 @@ function inicializarDatos() {
 
     if (!localStorage.getItem('tarifas')) {
         const tarifas = [
-            { tipo: 'Carro', precioHora: 3000, precioFijo: 0 },
-            { tipo: 'Moto', precioHora: 2000, precioFijo: 0 },
-            { tipo: 'Camión', precioHora: 5000, precioFijo: 0 },
-            { tipo: 'Bicicleta', precioHora: 1000, precioFijo: 0 }
+            { tipo: 'Carro', modalidad: 'hora', precioHora: 3000, precioFijo: 0 },
+            { tipo: 'Moto', modalidad: 'hora', precioHora: 2000, precioFijo: 0 },
+            { tipo: 'Camión', modalidad: 'hora', precioHora: 5000, precioFijo: 0 },
+            { tipo: 'Bicicleta', modalidad: 'hora', precioHora: 1000, precioFijo: 0 }
         ];
         guardarDatos('tarifas', tarifas);
+    } else {
+        migrarTarifas();
     }
 
     if (!localStorage.getItem('espacios')) {
@@ -102,6 +104,37 @@ function migrarUsuarios() {
 
     if (huboCambios) {
         guardarDatos('usuarios', usuariosActualizados);
+    }
+}
+
+// Completar datos faltantes en tarifas creadas con versiones anteriores
+function migrarTarifas() {
+    const tarifas = obtenerDatos('tarifas') || [];
+    let huboCambios = false;
+
+    const tarifasActualizadas = tarifas.map(tarifa => {
+        const tarifaActualizada = { ...tarifa };
+
+        if (!tarifaActualizada.modalidad) {
+            tarifaActualizada.modalidad = Number(tarifaActualizada.precioFijo) > 0 ? 'fijo' : 'hora';
+            huboCambios = true;
+        }
+
+        if (typeof tarifaActualizada.precioHora !== 'number') {
+            tarifaActualizada.precioHora = Number(tarifaActualizada.precioHora) || 0;
+            huboCambios = true;
+        }
+
+        if (typeof tarifaActualizada.precioFijo !== 'number') {
+            tarifaActualizada.precioFijo = Number(tarifaActualizada.precioFijo) || 0;
+            huboCambios = true;
+        }
+
+        return tarifaActualizada;
+    });
+
+    if (huboCambios) {
+        guardarDatos('tarifas', tarifasActualizadas);
     }
 }
 
