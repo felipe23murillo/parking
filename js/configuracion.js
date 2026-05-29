@@ -1,4 +1,5 @@
 // configuracion.js - Lógica de configuración del sistema
+import { getSettings, updateSettings, getAllActiveVehicles, getAllHistory, getAllRates, getAllUsers, getAllParkingSpaces } from './supabase.js';
 
 // Proteger la página
 protegerPagina();
@@ -18,51 +19,53 @@ function mostrarAlerta(mensaje, tipo = 'danger') {
     
     alertContainer.innerHTML = '';
     alertContainer.appendChild(alertDiv);
-
-    setTimeout(() => {
-        alertDiv.remove();
-    }, 5000);
+    setTimeout(() => alertDiv.remove(), 5000);
 }
 
-// Cargar configuración actual
-function cargarConfiguracion() {
-    const config = obtenerDatos('configuracion') || {};
+// Cargar configuración actual desde Supabase
+async function cargarConfiguracion() {
+    const result = await getSettings();
+    const config = result.success ? result.settings : {};
 
-    document.getElementById('nombreParqueadero').value = config.nombreParqueadero || '';
-    document.getElementById('direccion').value = config.direccion || '';
-    document.getElementById('telefono').value = config.telefono || '';
-    document.getElementById('email').value = config.email || '';
+    document.getElementById('nombreParqueadero').value = config?.parking_name || '';
+    document.getElementById('direccion').value = config?.address || '';
+    document.getElementById('telefono').value = config?.phone || '';
+    document.getElementById('email').value = config?.email || '';
 }
 
-// Cargar estadísticas
-function cargarEstadisticas() {
-    const vehiculosActivos = obtenerDatos('vehiculosActivos') || [];
-    const historial = obtenerDatos('historial') || [];
-    const tarifas = obtenerDatos('tarifas') || [];
-    const usuarios = obtenerDatos('usuarios') || [];
-    const espacios = obtenerDatos('espacios') || {};
+// Cargar estadísticas desde Supabase
+async function cargarEstadisticas() {
+    const [vehResult, histResult, ratesResult, usersResult, spacesResult] = await Promise.all([
+        getAllActiveVehicles(),
+        getAllHistory(),
+        getAllRates(),
+        getAllUsers(),
+        getAllParkingSpaces()
+    ]);
 
-    document.getElementById('statActivos').textContent = vehiculosActivos.length;
-    document.getElementById('statHistorial').textContent = historial.length;
-    document.getElementById('statTarifas').textContent = tarifas.length;
-    document.getElementById('statUsuarios').textContent = usuarios.length;
-
-    let totalEspacios = 0;
-    Object.values(espacios).forEach(tipo => {
-        totalEspacios += tipo.length;
-    });
-    document.getElementById('statEspacios').textContent = totalEspacios;
+    document.getElementById('statActivos').textContent = vehResult.success ? (vehResult.vehicles?.length || 0) : 0;
+    document.getElementById('statHistorial').textContent = histResult.success ? (histResult.history?.length || 0) : 0;
+    document.getElementById('statTarifas').textContent = ratesResult.success ? (ratesResult.rates?.length || 0) : 0;
+    document.getElementById('statUsuarios').textContent = usersResult.success ? (usersResult.users?.length || 0) : 0;
+    document.getElementById('statEspacios').textContent = spacesResult.success ? (spacesResult.spaces?.length || 0) : 0;
 }
 
 // Exportar todos los datos
-function exportarDatos() {
+async function exportarDatos() {
+    const [histResult, ratesResult, usersResult, spacesResult, settingsResult] = await Promise.all([
+        getAllHistory(),
+        getAllRates(),
+        getAllUsers(),
+        getAllParkingSpaces(),
+        getSettings()
+    ]);
+
     const datos = {
-        vehiculosActivos: obtenerDatos('vehiculosActivos'),
-        historial: obtenerDatos('historial'),
-        tarifas: obtenerDatos('tarifas'),
-        usuarios: obtenerDatos('usuarios'),
-        espacios: obtenerDatos('espacios'),
-        configuracion: obtenerDatos('configuracion'),
+        historial: histResult.success ? histResult.history : [],
+        tarifas: ratesResult.success ? ratesResult.rates : [],
+        usuarios: usersResult.success ? usersResult.users : [],
+        espacios: spacesResult.success ? spacesResult.spaces : [],
+        configuracion: settingsResult.success ? settingsResult.settings : null,
         fechaExportacion: new Date().toISOString()
     };
 
@@ -79,67 +82,32 @@ function exportarDatos() {
     mostrarAlerta('Datos exportados exitosamente', 'success');
 }
 
-// Limpiar vehículos activos
-function limpiarVehiculosActivos() {
-    if (confirm('¿Está seguro de eliminar todos los vehículos activos? Esto liberará todos los espacios.')) {
-        // Liberar todos los espacios
-        const espacios = obtenerDatos('espacios');
-        Object.keys(espacios).forEach(tipo => {
-            espacios[tipo].forEach(espacio => {
-                espacio.ocupado = false;
-                delete espacio.vehiculo;
-            });
-        });
-        guardarDatos('espacios', espacios);
-
-        // Limpiar vehículos activos
-        guardarDatos('vehiculosActivos', []);
-        
-        cargarEstadisticas();
-        mostrarAlerta('Todos los vehículos activos han sido eliminados y los espacios liberados', 'success');
-    }
-}
-
-// Resetear sistema completo
-function resetearSistema() {
-    if (confirm('⚠️ ADVERTENCIA: Esto eliminará TODOS los datos del sistema incluyendo historial, configuración, vehículos y tarifas. ¿Está completamente seguro?')) {
-        if (confirm('Confirmación final: ¿Realmente desea resetear todo el sistema?')) {
-            limpiarTodo();
-            mostrarAlerta('Sistema reseteado exitosamente. Redirigiendo...', 'success');
-            
-            setTimeout(() => {
-                cerrarSesion();
-            }, 2000);
-        }
-    }
-}
-
 // Inicializar página
 document.addEventListener('DOMContentLoaded', function() {
+    protegerPagina();
     cargarConfiguracion();
     cargarEstadisticas();
 
     // Formulario de configuración
     const form = document.getElementById('configuracionForm');
-    form.addEventListener('submit', function(e) {
+    form.addEventListener('submit', async function(e) {
         e.preventDefault();
 
         const config = {
-            nombreParqueadero: document.getElementById('nombreParqueadero').value,
-            direccion: document.getElementById('direccion').value,
-            telefono: document.getElementById('telefono').value,
+            parking_name: document.getElementById('nombreParqueadero').value,
+            address: document.getElementById('direccion').value,
+            phone: document.getElementById('telefono').value,
             email: document.getElementById('email').value
         };
 
-        if (guardarDatos('configuracion', config)) {
+        const result = await updateSettings(config);
+        if (result.success) {
             mostrarAlerta('Configuración guardada exitosamente', 'success');
         } else {
-            mostrarAlerta('Error al guardar la configuración', 'danger');
+            mostrarAlerta('Error al guardar la configuración: ' + result.error, 'danger');
         }
     });
 
     // Botones de gestión de datos
     document.getElementById('btnExportarDatos').addEventListener('click', exportarDatos);
-    document.getElementById('btnLimpiarVehiculos').addEventListener('click', limpiarVehiculosActivos);
-    document.getElementById('btnResetearSistema').addEventListener('click', resetearSistema);
 });

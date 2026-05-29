@@ -1,57 +1,50 @@
 // espacios.js - Lógica de gestión de espacios
+import { getAllParkingSpaces, updateParkingSpace } from './supabase.js';
 
 // Proteger la página
 protegerPagina();
 
-// Cargar espacios
-function cargarEspacios() {
-    const espacios = obtenerDatos('espacios') || {};
-    const vehiculosActivos = obtenerDatos('vehiculosActivos') || [];
+// Cargar espacios desde Supabase
+async function cargarEspacios() {
+    const result = await getAllParkingSpaces();
+    const espacios = result.success ? result.spaces : [];
 
-    // Actualizar ocupación basada en vehículos activos
-    vehiculosActivos.forEach(vehiculo => {
-        const tipo = vehiculo.tipo;
-        if (espacios[tipo]) {
-            const espacio = espacios[tipo].find(e => e.numero === vehiculo.espacio);
-            if (espacio) {
-                espacio.ocupado = true;
-                espacio.vehiculo = vehiculo.placa;
-            }
-        }
-    });
-
-    // Guardar actualización
-    guardarDatos('espacios', espacios);
+    // Agrupar por tipo
+    const espaciosPorTipo = {
+        Carro: espacios.filter(e => e.vehicle_type === 'Carro'),
+        Moto: espacios.filter(e => e.vehicle_type === 'Moto'),
+        Camión: espacios.filter(e => e.vehicle_type === 'Camión'),
+        Bicicleta: espacios.filter(e => e.vehicle_type === 'Bicicleta')
+    };
 
     // Mostrar espacios por tipo
-    mostrarEspaciosPorTipo('Carro', 'espaciosCarros');
-    mostrarEspaciosPorTipo('Moto', 'espaciosMotos');
-    mostrarEspaciosPorTipo('Camión', 'espaciosCamiones');
-    mostrarEspaciosPorTipo('Bicicleta', 'espaciosBicicletas');
+    mostrarEspaciosPorTipo(espaciosPorTipo.Carro, 'espaciosCarros');
+    mostrarEspaciosPorTipo(espaciosPorTipo.Moto, 'espaciosMotos');
+    mostrarEspaciosPorTipo(espaciosPorTipo.Camión, 'espaciosCamiones');
+    mostrarEspaciosPorTipo(espaciosPorTipo.Bicicleta, 'espaciosBicicletas');
 
     // Calcular estadísticas
-    calcularEstadisticas();
+    calcularEstadisticas(espacios);
 }
 
 // Mostrar espacios por tipo
-function mostrarEspaciosPorTipo(tipo, containerId) {
-    const espacios = obtenerDatos('espacios') || {};
+function mostrarEspaciosPorTipo(espacios, containerId) {
     const container = document.getElementById(containerId);
 
-    if (!espacios[tipo] || espacios[tipo].length === 0) {
+    if (!espacios || espacios.length === 0) {
         container.innerHTML = '<p class="text-muted">No hay espacios configurados</p>';
         return;
     }
 
-    container.innerHTML = espacios[tipo].map(espacio => {
-        const clase = espacio.ocupado ? 'bg-danger' : 'bg-success';
-        const texto = espacio.ocupado ? 'Ocupado' : 'Libre';
-        const titulo = espacio.ocupado ? `Ocupado por: ${espacio.vehiculo || 'N/A'}` : 'Disponible';
+    container.innerHTML = espacios.map(espacio => {
+        const clase = espacio.is_occupied ? 'bg-danger' : 'bg-success';
+        const texto = espacio.is_occupied ? 'Ocupado' : 'Libre';
+        const titulo = espacio.is_occupied ? `Ocupado por: ${espacio.license_plate || 'N/A'}` : 'Disponible';
         
         return `
             <div class="espacio-item">
                 <span class="badge ${clase} w-100 p-2" title="${titulo}">
-                    ${espacio.numero}<br>
+                    ${espacio.space_number}<br>
                     <small>${texto}</small>
                 </span>
             </div>
@@ -60,17 +53,9 @@ function mostrarEspaciosPorTipo(tipo, containerId) {
 }
 
 // Calcular estadísticas
-function calcularEstadisticas() {
-    const espacios = obtenerDatos('espacios') || {};
-    
-    let totalEspacios = 0;
-    let totalOcupados = 0;
-
-    Object.values(espacios).forEach(tipoEspacios => {
-        totalEspacios += tipoEspacios.length;
-        totalOcupados += tipoEspacios.filter(e => e.ocupado).length;
-    });
-
+function calcularEstadisticas(espacios) {
+    const totalEspacios = espacios?.length || 0;
+    const totalOcupados = espacios?.filter(e => e.is_occupied).length || 0;
     const disponibles = totalEspacios - totalOcupados;
     const porcentaje = totalEspacios > 0 ? Math.round((totalOcupados / totalEspacios) * 100) : 0;
 
@@ -82,6 +67,7 @@ function calcularEstadisticas() {
 
 // Inicializar página
 document.addEventListener('DOMContentLoaded', function() {
+    protegerPagina();
     cargarEspacios();
 
     // Actualizar cada 30 segundos

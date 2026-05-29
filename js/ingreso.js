@@ -1,7 +1,17 @@
 // ingreso.js - Lógica de ingreso de vehículos
+import { getAvailableSpacesByType, getAllRates } from './supabase.js';
 
 // Proteger la página
 protegerPagina();
+
+// Formatear moneda
+function formatearMoneda(valor) {
+    return new Intl.NumberFormat('es-CO', {
+        style: 'currency',
+        currency: 'COP',
+        minimumFractionDigits: 0
+    }).format(valor);
+}
 
 // Actualizar fecha y hora actual
 function actualizarFechaHora() {
@@ -18,10 +28,11 @@ function actualizarFechaHora() {
 }
 
 // Actualizar contador de espacios disponibles
-function actualizarContadorEspacios() {
+async function actualizarContadorEspacios() {
     const tipos = ['Carro', 'Moto', 'Camión', 'Bicicleta'];
-    tipos.forEach(tipo => {
-        const disponibles = obtenerEspaciosDisponibles(tipo).length;
+    for (const tipo of tipos) {
+        const result = await getAvailableSpacesByType(tipo);
+        const disponibles = result.success ? result.spaces.length : 0;
         const elemento = document.getElementById(`espacios${tipo}s`);
         if (elemento) {
             elemento.textContent = disponibles;
@@ -31,36 +42,38 @@ function actualizarContadorEspacios() {
                 elemento.classList.remove('text-danger');
             }
         }
-    });
+    }
 }
 
-// Mostrar tarifas
-function mostrarTarifas() {
-    const tarifas = obtenerDatos('tarifas') || [];
+// Mostrar tarifas desde Supabase
+async function mostrarTarifas() {
+    const result = await getAllRates();
+    const tarifas = result.success ? result.rates : [];
     const container = document.getElementById('tarifasInfo');
-    
-    if (tarifas.length === 0) {
+
+    if (!tarifas || tarifas.length === 0) {
         container.innerHTML = '<p class="text-muted">No hay tarifas configuradas</p>';
         return;
     }
 
     container.innerHTML = '<small>' + tarifas.map(t => {
-        const modalidad = t.modalidad || (Number(t.precioFijo) > 0 ? 'fijo' : 'hora');
+        const modalidad = t.fixed_price > 0 ? 'fijo' : 'hora';
         const precio = modalidad === 'fijo' ? 
-            `Precio fijo: ${formatearMoneda(Number(t.precioFijo) || 0)}` :
-            `${formatearMoneda(Number(t.precioHora) || 0)}/hora`;
-        return `<strong>${t.tipo}:</strong> ${precio}`;
+            `Precio fijo: ${formatearMoneda(Number(t.fixed_price) || 0)}` :
+            `${formatearMoneda(Number(t.price_per_hour) || 0)}/hora`;
+        return `<strong>${t.vehicle_type}:</strong> ${precio}`;
     }).join('<br>') + '</small>';
 }
 
 // Cargar espacios según tipo de vehículo
-function cargarEspacios(tipo) {
+async function cargarEspacios(tipo) {
     const selectEspacio = document.getElementById('espacio');
-    const espaciosDisponibles = obtenerEspaciosDisponibles(tipo);
+    const result = await getAvailableSpacesByType(tipo);
+    const espaciosDisponibles = result.success ? result.spaces : [];
 
     selectEspacio.innerHTML = '';
 
-    if (espaciosDisponibles.length === 0) {
+    if (!espaciosDisponibles || espaciosDisponibles.length === 0) {
         selectEspacio.innerHTML = '<option value="">No hay espacios disponibles</option>';
         selectEspacio.disabled = true;
         mostrarAlerta(`No hay espacios disponibles para ${tipo}`, 'warning');
@@ -71,8 +84,8 @@ function cargarEspacios(tipo) {
     selectEspacio.innerHTML = '<option value="">Seleccione un espacio</option>';
     espaciosDisponibles.forEach(espacio => {
         const option = document.createElement('option');
-        option.value = espacio.numero;
-        option.textContent = espacio.numero;
+        option.value = espacio.space_number;
+        option.textContent = espacio.space_number;
         selectEspacio.appendChild(option);
     });
 }
@@ -92,11 +105,7 @@ function mostrarAlerta(mensaje, tipo = 'danger') {
     
     alertContainer.innerHTML = '';
     alertContainer.appendChild(alertDiv);
-
-    // Auto-cerrar después de 5 segundos
-    setTimeout(() => {
-        alertDiv.remove();
-    }, 5000);
+    setTimeout(() => alertDiv.remove(), 5000);
 }
 
 // Inicializar página
@@ -105,10 +114,8 @@ document.addEventListener('DOMContentLoaded', function() {
     actualizarContadorEspacios();
     mostrarTarifas();
 
-    // Actualizar fecha cada segundo
     setInterval(actualizarFechaHora, 1000);
 
-    // Evento cambio de tipo de vehículo
     const tipoVehiculoSelect = document.getElementById('tipoVehiculo');
     tipoVehiculoSelect.addEventListener('change', function() {
         const tipo = this.value;
@@ -120,43 +127,39 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Manejo del formulario
     const form = document.getElementById('ingresoForm');
-    form.addEventListener('submit', function(e) {
+    form.addEventListener('submit', async function(e) {
         e.preventDefault();
 
         const placa = document.getElementById('placa').value.toUpperCase().trim();
         const tipo = document.getElementById('tipoVehiculo').value;
         const espacio = document.getElementById('espacio').value;
+        const usuario = obtenerUsuarioActual();
 
-        // Validaciones
         if (!placa || !tipo || !espacio) {
             mostrarAlerta('Por favor complete todos los campos obligatorios', 'warning');
             return;
         }
 
-        // Registrar ingreso
-        const resultado = registrarIngreso(placa, tipo, espacio);
+        const resultado = await registrarIngreso(placa, tipo, espacio, usuario?.id);
 
         if (resultado.exito) {
             mostrarAlerta(resultado.mensaje, 'success');
             
-            // Limpiar formulario
             form.reset();
             document.getElementById('espacio').innerHTML = '<option value="">Primero seleccione el tipo de vehículo</option>';
             document.getElementById('espacio').disabled = true;
 
-            // Actualizar contadores
             actualizarContadorEspacios();
 
-            // Mostrar información del vehículo registrado
             setTimeout(() => {
+                const vehiculo = resultado.vehiculo;
                 mostrarAlerta(
                     `Vehículo registrado:<br>
-                    <strong>Placa:</strong> ${resultado.vehiculo.placa}<br>
-                    <strong>Tipo:</strong> ${resultado.vehiculo.tipo}<br>
-                    <strong>Espacio:</strong> ${resultado.vehiculo.espacio}<br>
-                    <strong>Hora:</strong> ${resultado.vehiculo.horaIngreso}`,
+                    <strong>Placa:</strong> ${vehiculo.license_plate}<br>
+                    <strong>Tipo:</strong> ${vehiculo.vehicle_type}<br>
+                    <strong>Espacio:</strong> ${vehiculo.parking_space}<br>
+                    <strong>Hora:</strong> ${vehiculo.entry_time}`,
                     'info'
                 );
             }, 2000);

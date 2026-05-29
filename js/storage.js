@@ -1,231 +1,177 @@
-// storage.js - Funciones para manejar LocalStorage
+// storage.js - Funciones adaptadas para usar Supabase en lugar de localStorage
+import {
+    loginUser,
+    getAllUsers,
+    createUser,
+    updateUser,
+    deleteUser,
+    getAllActiveVehicles,
+    getAllParkingSpaces,
+    getAvailableSpacesByType,
+    getAllHistory,
+    getAllRates,
+    getSettings
+} from './supabase.js';
 
-// Inicializar datos por defecto si no existen
-function inicializarDatos() {
-    if (!localStorage.getItem('usuarios')) {
-        const usuarios = [
-            {
-                id: 1,
-                usuario: 'admin',
-                password: 'admin123',
-                nombre: 'Administrador',
-                rol: 'admin',
-                estado: 'activo',
-                fechaCreacion: new Date().toISOString()
-            }
-        ];
-        guardarDatos('usuarios', usuarios);
-    } else {
-        migrarUsuarios();
-    }
+// Cache local para mejorar rendimiento
+let cache = {
+    usuarios: [],
+    vehiculosActivos: [],
+    historial: [],
+    tarifas: [],
+    espacios: [],
+    configuracion: null
+};
 
-    if (!localStorage.getItem('vehiculosActivos')) {
-        guardarDatos('vehiculosActivos', []);
-    }
+// ==================== INICIALIZACIÓN ====================
 
-    if (!localStorage.getItem('historial')) {
-        guardarDatos('historial', []);
-    }
-
-    if (!localStorage.getItem('tarifas')) {
-        const tarifas = [
-            { tipo: 'Carro', modalidad: 'hora', precioHora: 3000, precioFijo: 0 },
-            { tipo: 'Moto', modalidad: 'hora', precioHora: 2000, precioFijo: 0 },
-            { tipo: 'Camión', modalidad: 'hora', precioHora: 5000, precioFijo: 0 },
-            { tipo: 'Bicicleta', modalidad: 'hora', precioHora: 1000, precioFijo: 0 }
-        ];
-        guardarDatos('tarifas', tarifas);
-    } else {
-        migrarTarifas();
-    }
-
-    if (!localStorage.getItem('espacios')) {
-        const espacios = {
-            'Carro': Array.from({ length: 20 }, (_, i) => ({ 
-                numero: `C-${i + 1}`, 
-                ocupado: false, 
-                tipo: 'Carro' 
-            })),
-            'Moto': Array.from({ length: 15 }, (_, i) => ({ 
-                numero: `M-${i + 1}`, 
-                ocupado: false, 
-                tipo: 'Moto' 
-            })),
-            'Camión': Array.from({ length: 5 }, (_, i) => ({ 
-                numero: `T-${i + 1}`, 
-                ocupado: false, 
-                tipo: 'Camión' 
-            })),
-            'Bicicleta': Array.from({ length: 10 }, (_, i) => ({ 
-                numero: `B-${i + 1}`, 
-                ocupado: false, 
-                tipo: 'Bicicleta' 
-            }))
-        };
-        guardarDatos('espacios', espacios);
-    }
-
-    if (!localStorage.getItem('configuracion')) {
-        const configuracion = {
-            nombreParqueadero: 'Parqueadero Central',
-            direccion: 'Calle Principal #123',
-            telefono: '555-1234',
-            email: 'info@parqueadero.com'
-        };
-        guardarDatos('configuracion', configuracion);
-    }
-}
-
-// Completar datos faltantes en usuarios creados con versiones anteriores
-function migrarUsuarios() {
-    const usuarios = obtenerDatos('usuarios') || [];
-    let huboCambios = false;
-
-    const usuariosActualizados = usuarios.map(usuario => {
-        const usuarioActualizado = { ...usuario };
-
-        if (!usuarioActualizado.estado) {
-            usuarioActualizado.estado = 'activo';
-            huboCambios = true;
-        }
-
-        if (!usuarioActualizado.fechaCreacion) {
-            usuarioActualizado.fechaCreacion = new Date().toISOString();
-            huboCambios = true;
-        }
-
-        if (!usuarioActualizado.rol) {
-            usuarioActualizado.rol = 'operador';
-            huboCambios = true;
-        }
-
-        return usuarioActualizado;
-    });
-
-    if (huboCambios) {
-        guardarDatos('usuarios', usuariosActualizados);
-    }
-}
-
-// Completar datos faltantes en tarifas creadas con versiones anteriores
-function migrarTarifas() {
-    const tarifas = obtenerDatos('tarifas') || [];
-    let huboCambios = false;
-
-    const tarifasActualizadas = tarifas.map(tarifa => {
-        const tarifaActualizada = { ...tarifa };
-
-        if (!tarifaActualizada.modalidad) {
-            tarifaActualizada.modalidad = Number(tarifaActualizada.precioFijo) > 0 ? 'fijo' : 'hora';
-            huboCambios = true;
-        }
-
-        if (typeof tarifaActualizada.precioHora !== 'number') {
-            tarifaActualizada.precioHora = Number(tarifaActualizada.precioHora) || 0;
-            huboCambios = true;
-        }
-
-        if (typeof tarifaActualizada.precioFijo !== 'number') {
-            tarifaActualizada.precioFijo = Number(tarifaActualizada.precioFijo) || 0;
-            huboCambios = true;
-        }
-
-        return tarifaActualizada;
-    });
-
-    if (huboCambios) {
-        guardarDatos('tarifas', tarifasActualizadas);
-    }
-}
-
-// Guardar datos en LocalStorage
-function guardarDatos(clave, datos) {
+async function inicializarDatos() {
     try {
-        localStorage.setItem(clave, JSON.stringify(datos));
+        console.log('Inicializando datos desde Supabase...');
+        
+        const resultados = await Promise.all([
+            getAllUsers(),
+            getAllActiveVehicles(),
+            getAllHistory(),
+            getAllRates(),
+            getAllParkingSpaces(),
+            getSettings()
+        ]);
+
+        if (resultados[0].success) cache.usuarios = resultados[0].users || [];
+        if (resultados[1].success) cache.vehiculosActivos = resultados[1].vehicles || [];
+        if (resultados[2].success) cache.historial = resultados[2].history || [];
+        if (resultados[3].success) cache.tarifas = resultados[3].rates || [];
+        if (resultados[4].success) cache.espacios = resultados[4].spaces || [];
+        if (resultados[5].success) cache.configuracion = resultados[5].settings;
+
+        console.log('Datos cargados correctamente');
         return true;
     } catch (error) {
-        console.error('Error al guardar datos:', error);
+        console.error('Error al inicializar datos:', error);
         return false;
     }
 }
 
-// Obtener datos desde LocalStorage
-function obtenerDatos(clave) {
-    try {
-        const datos = localStorage.getItem(clave);
-        return datos ? JSON.parse(datos) : null;
-    } catch (error) {
-        console.error('Error al obtener datos:', error);
-        return null;
+// ==================== USUARIOS ====================
+
+async function obtenerUsuarios() {
+    const result = await getAllUsers();
+    if (result.success) {
+        cache.usuarios = result.users || [];
+        return cache.usuarios;
     }
+    return cache.usuarios;
 }
 
-// Eliminar datos de LocalStorage
-function eliminarDatos(clave) {
-    try {
-        localStorage.removeItem(clave);
-        return true;
-    } catch (error) {
-        console.error('Error al eliminar datos:', error);
-        return false;
+async function crearUsuario(datosUsuario) {
+    const result = await createUser({
+        nombre: datosUsuario.nombre,
+        usuario: datosUsuario.usuario,
+        password: datosUsuario.password,
+        rol: datosUsuario.rol || 'operador',
+        estado: datosUsuario.estado || 'activo'
+    });
+    
+    if (result.success) {
+        cache.usuarios.push(result.user);
+        return result.user;
     }
+    return null;
 }
 
-// Actualizar un elemento específico en un array
-function actualizarEnArray(clave, condicion, datosNuevos) {
-    try {
-        const datos = obtenerDatos(clave);
-        if (!datos) return false;
-
-        const index = datos.findIndex(condicion);
+async function actualizarUsuario(usuarioId, datosNuevos) {
+    const result = await updateUser(usuarioId, datosNuevos);
+    if (result.success) {
+        const index = cache.usuarios.findIndex(u => u.id === usuarioId);
         if (index !== -1) {
-            datos[index] = { ...datos[index], ...datosNuevos };
-            return guardarDatos(clave, datos);
+            cache.usuarios[index] = result.user;
         }
-        return false;
-    } catch (error) {
-        console.error('Error al actualizar en array:', error);
-        return false;
+        return result.user;
     }
+    return null;
 }
 
-// Eliminar un elemento de un array
-function eliminarDeArray(clave, condicion) {
-    try {
-        const datos = obtenerDatos(clave);
-        if (!datos) return false;
-
-        const nuevosDatos = datos.filter(item => !condicion(item));
-        return guardarDatos(clave, nuevosDatos);
-    } catch (error) {
-        console.error('Error al eliminar de array:', error);
-        return false;
-    }
-}
-
-// Agregar elemento a un array
-function agregarAArray(clave, nuevoElemento) {
-    try {
-        const datos = obtenerDatos(clave) || [];
-        datos.push(nuevoElemento);
-        return guardarDatos(clave, datos);
-    } catch (error) {
-        console.error('Error al agregar a array:', error);
-        return false;
-    }
-}
-
-// Limpiar toda la base de datos (usar con precaución)
-function limpiarTodo() {
-    try {
-        localStorage.clear();
-        inicializarDatos();
+async function eliminarUsuario(usuarioId) {
+    const result = await deleteUser(usuarioId);
+    if (result.success) {
+        cache.usuarios = cache.usuarios.filter(u => u.id !== usuarioId);
         return true;
-    } catch (error) {
-        console.error('Error al limpiar datos:', error);
-        return false;
     }
+    return false;
 }
 
-// Inicializar al cargar
+// ==================== VEHÍCULOS ACTIVOS ====================
+
+async function obtenerVehiculosActivos() {
+    const result = await getAllActiveVehicles();
+    if (result.success) {
+        cache.vehiculosActivos = result.vehicles || [];
+        return cache.vehiculosActivos;
+    }
+    return cache.vehiculosActivos;
+}
+
+// ==================== ESPACIOS DE PARQUEO ====================
+
+async function obtenerEspacios() {
+    const result = await getAllParkingSpaces();
+    if (result.success) {
+        cache.espacios = result.spaces || [];
+        return cache.espacios;
+    }
+    return cache.espacios;
+}
+
+// ==================== HISTORIAL ====================
+
+async function obtenerHistorial() {
+    const result = await getAllHistory();
+    if (result.success) {
+        cache.historial = result.history || [];
+        return cache.historial;
+    }
+    return cache.historial;
+}
+
+// ==================== TARIFAS ====================
+
+async function obtenerTarifas() {
+    const result = await getAllRates();
+    if (result.success) {
+        cache.tarifas = result.rates || [];
+        return cache.tarifas;
+    }
+    return cache.tarifas;
+}
+
+// ==================== CONFIGURACIÓN ====================
+
+async function obtenerConfiguracion() {
+    const result = await getSettings();
+    if (result.success) {
+        cache.configuracion = result.settings;
+        return cache.configuracion;
+    }
+    return cache.configuracion;
+}
+
+// ==================== FUNCIONES LEGADAS (compatibilidad) ====================
+
+function guardarDatos(clave, datos) {
+    cache[clave] = datos;
+    return true;
+}
+
+function obtenerDatos(clave) {
+    return cache[clave] || null;
+}
+
+function eliminarDatos(clave) {
+    cache[clave] = null;
+    return true;
+}
+
+// ==================== INICIALIZAR AL CARGAR ====================
+
 inicializarDatos();

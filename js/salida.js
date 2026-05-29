@@ -21,29 +21,27 @@ function mostrarAlerta(mensaje, tipo = 'danger') {
     alertContainer.innerHTML = '';
     alertContainer.appendChild(alertDiv);
 
-    // Auto-cerrar después de 5 segundos
-    setTimeout(() => {
-        alertDiv.remove();
-    }, 5000);
+    setTimeout(() => alertDiv.remove(), 5000);
 }
 
-// Cargar lista de vehículos activos
-function cargarVehiculosActivos() {
-    const vehiculos = obtenerDatos('vehiculosActivos') || [];
+// Cargar lista de vehículos activos desde Supabase
+async function cargarVehiculosActivos() {
+    const result = await getAllActiveVehicles();
+    const vehiculos = result.success ? result.vehicles : [];
     const tbody = document.getElementById('vehiculosActivosTabla');
 
-    if (vehiculos.length === 0) {
+    if (!vehiculos || vehiculos.length === 0) {
         tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No hay vehículos parqueados</td></tr>';
         return;
     }
 
     tbody.innerHTML = vehiculos.map(v => `
         <tr>
-            <td><strong>${v.placa}</strong></td>
-            <td><small><i class="bi ${obtenerIconoVehiculo(v.tipo)}"></i> ${v.tipo}</small></td>
-            <td><span class="badge bg-primary">${v.espacio}</span></td>
+            <td><strong>${v.license_plate}</strong></td>
+            <td><small><i class="bi ${obtenerIconoVehiculo(v.vehicle_type)}"></i> ${v.vehicle_type}</small></td>
+            <td><span class="badge bg-primary">${v.parking_space}</span></td>
             <td>
-                <button class="btn btn-sm btn-outline-primary" onclick="buscarPorPlaca('${v.placa}')">
+                <button class="btn btn-sm btn-outline-primary" onclick="buscarPorPlaca('${v.license_plate}')">
                     <i class="bi bi-search"></i>
                 </button>
             </td>
@@ -58,8 +56,9 @@ window.buscarPorPlaca = function(placa) {
 };
 
 // Buscar vehículo
-function buscarVehiculo(placa) {
-    const vehiculo = buscarVehiculoPorPlaca(placa);
+async function buscarVehiculo(placa) {
+    const result = await buscarVehiculoPorPlaca(placa);
+    const vehiculo = result?.vehicle || null;
 
     if (!vehiculo) {
         mostrarAlerta('No se encontró un vehículo con esa placa', 'warning');
@@ -73,17 +72,18 @@ function buscarVehiculo(placa) {
 
 // Mostrar información del vehículo
 function mostrarInfoVehiculo(vehiculo) {
-    document.getElementById('infoPlaca').textContent = vehiculo.placa;
-    document.getElementById('infoTipo').innerHTML = `<i class="bi ${obtenerIconoVehiculo(vehiculo.tipo)}"></i> ${vehiculo.tipo}`;
-    document.getElementById('infoEspacio').textContent = vehiculo.espacio;
-    document.getElementById('infoFechaIngreso').textContent = formatearFecha(vehiculo.fechaIngreso);
-    document.getElementById('infoHoraIngreso').textContent = vehiculo.horaIngreso;
+    document.getElementById('infoPlaca').textContent = vehiculo.license_plate;
+    document.getElementById('infoTipo').innerHTML = `<i class="bi ${obtenerIconoVehiculo(vehiculo.vehicle_type)}"></i> ${vehiculo.vehicle_type}`;
+    document.getElementById('infoEspacio').textContent = vehiculo.parking_space;
+    document.getElementById('infoFechaIngreso').textContent = formatearFecha(vehiculo.entry_date);
+    document.getElementById('infoHoraIngreso').textContent = vehiculo.entry_time;
 
-    const tiempo = calcularTiempoEstadia(vehiculo.fechaIngreso);
-    document.getElementById('tiempoParqueado').textContent = tiempo.texto;
+    const tiempo = calcularTiempoEstadia(`${vehiculo.entry_date} ${vehiculo.entry_time}`);
+    document.getElementById('tiempoParqueado').textContent = `${tiempo} hora(s)`;
 
-    const valor = calcularValorAPagar(vehiculo.tipo, vehiculo.fechaIngreso);
-    document.getElementById('valorPagar').textContent = formatearMoneda(valor);
+    calcularTarifa(vehiculo.vehicle_type, tiempo).then(valor => {
+        document.getElementById('valorPagar').textContent = formatearMoneda(valor);
+    });
 
     document.getElementById('vehiculoInfo').classList.remove('d-none');
 }
@@ -110,31 +110,39 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Botón registrar salida
     const btnRegistrarSalida = document.getElementById('btnRegistrarSalida');
-    btnRegistrarSalida.addEventListener('click', function() {
+    btnRegistrarSalida.addEventListener('click', async function() {
         if (!vehiculoActual) return;
 
         if (confirm('¿Está seguro de registrar la salida de este vehículo?')) {
-            const resultado = registrarSalida(vehiculoActual.placa);
+            const usuario = obtenerUsuarioActual();
+            const resultado = await registrarSalida(vehiculoActual, usuario?.id);
 
             if (resultado.exito) {
-                const valor = formatearMoneda(resultado.vehiculo.valorPagado);
+                const valor = formatearMoneda(resultado.tarifa);
                 
                 mostrarAlerta(
                     `Salida registrada exitosamente<br>
-                    <strong>Placa:</strong> ${resultado.vehiculo.placa}<br>
-                    <strong>Tiempo:</strong> ${resultado.vehiculo.tiempoEstadia}<br>
+                    <strong>Placa:</strong> ${vehiculoActual.license_plate}<br>
+                    <strong>Tiempo:</strong> ${resultado.tiempoEstadia} hora(s)<br>
                     <strong>Total a pagar:</strong> ${valor}`,
                     'success'
                 );
 
-                // Limpiar formulario
                 document.getElementById('placaBuscar').value = '';
                 ocultarInfoVehiculo();
                 cargarVehiculosActivos();
 
-                // Mostrar ticket de pago después de 1 segundo
                 setTimeout(() => {
-                    mostrarTicketPago(resultado.vehiculo);
+                    mostrarTicketPago({
+                        placa: vehiculoActual.license_plate,
+                        tipo: vehiculoActual.vehicle_type,
+                        espacio: vehiculoActual.parking_space,
+                        fechaIngreso: vehiculoActual.entry_date,
+                        horaIngreso: vehiculoActual.entry_time,
+                        fechaSalida: resultado.historial?.exit_date,
+                        tiempoEstadia: resultado.tiempoEstadia,
+                        valorPagado: resultado.tarifa
+                    });
                 }, 1000);
             } else {
                 mostrarAlerta(resultado.mensaje, 'danger');
@@ -143,8 +151,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Botón cancelar
-    const btnCancelar = document.getElementById('btnCancelar');
-    btnCancelar.addEventListener('click', function() {
+    document.getElementById('btnCancelar').addEventListener('click', function() {
         document.getElementById('placaBuscar').value = '';
         ocultarInfoVehiculo();
     });
@@ -152,6 +159,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Mostrar ticket de pago
 function mostrarTicketPago(vehiculo) {
+    const configuracion = obtenerDatos('configuracion');
     const modal = document.createElement('div');
     modal.className = 'modal fade';
     modal.innerHTML = `
@@ -162,15 +170,15 @@ function mostrarTicketPago(vehiculo) {
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body text-center">
-                    <h3 class="mb-3">${obtenerDatos('configuracion')?.nombreParqueadero || 'Parqueadero Central'}</h3>
+                    <h3 class="mb-3">${configuracion?.nombreParqueadero || 'Parqueadero Central'}</h3>
                     <hr>
                     <p><strong>Placa:</strong> ${vehiculo.placa}</p>
                     <p><strong>Tipo:</strong> ${vehiculo.tipo}</p>
                     <p><strong>Espacio:</strong> ${vehiculo.espacio}</p>
                     <hr>
                     <p><strong>Ingreso:</strong> ${formatearFecha(vehiculo.fechaIngreso)}</p>
-                    <p><strong>Salida:</strong> ${formatearFecha(vehiculo.fechaSalida)}</p>
-                    <p><strong>Tiempo:</strong> ${vehiculo.tiempoEstadia}</p>
+                    <p><strong>Salida:</strong> ${formatearFecha(new Date())}</p>
+                    <p><strong>Tiempo:</strong> ${vehiculo.tiempoEstadia} hora(s)</p>
                     <hr>
                     <h2 class="text-success">Total: ${formatearMoneda(vehiculo.valorPagado)}</h2>
                     <hr>

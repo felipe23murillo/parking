@@ -1,22 +1,41 @@
 // dashboard.js - Lógica del dashboard
+import { getAllActiveVehicles } from './supabase.js';
+
+// Formatear fecha
+function formatearFecha(fecha) {
+    const date = new Date(fecha);
+    return date.toLocaleDateString('es-CO', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
+// Obtener icono por tipo de vehículo
+function obtenerIconoVehiculo(tipo) {
+    const iconos = {
+        'Carro': 'bi-car-front-fill',
+        'Moto': 'bi-scooter',
+        'Camión': 'bi-truck',
+        'Bicicleta': 'bi-bicycle'
+    };
+    return iconos[tipo] || 'bi-question-circle';
+}
 
 // Actualizar estadísticas
-function actualizarEstadisticas() {
-    // Obtener datos directamente de LocalStorage
-    const vehiculos = JSON.parse(localStorage.getItem('vehiculosActivos')) || [];
+async function actualizarEstadisticas() {
+    const result = await getAllActiveVehicles();
+    const vehiculos = result.success ? result.vehicles : [];
     
-    console.log('Vehículos en LocalStorage:', vehiculos); // Debug
-    
-    // Contar por tipo
     const conteo = {
-        Carro: vehiculos.filter(v => v.tipo === 'Carro').length,
-        Moto: vehiculos.filter(v => v.tipo === 'Moto').length,
-        Camión: vehiculos.filter(v => v.tipo === 'Camión').length,
-        Bicicleta: vehiculos.filter(v => v.tipo === 'Bicicleta').length
+        Carro: vehiculos.filter(v => v.vehicle_type === 'Carro').length,
+        Moto: vehiculos.filter(v => v.vehicle_type === 'Moto').length,
+        Camión: vehiculos.filter(v => v.vehicle_type === 'Camión').length,
+        Bicicleta: vehiculos.filter(v => v.vehicle_type === 'Bicicleta').length
     };
-    
-    console.log('Conteo:', conteo); // Debug
-    
+
     document.getElementById('totalCarros').textContent = conteo.Carro;
     document.getElementById('totalMotos').textContent = conteo.Moto;
     document.getElementById('totalCamiones').textContent = conteo.Camión;
@@ -27,53 +46,46 @@ function actualizarEstadisticas() {
 }
 
 // Cargar actividad reciente
-function cargarActividadReciente() {
-    const vehiculos = JSON.parse(localStorage.getItem('vehiculosActivos')) || [];
+async function cargarActividadReciente() {
+    const result = await getAllActiveVehicles();
+    const vehiculos = result.success ? result.vehicles : [];
     const tbody = document.getElementById('actividadReciente');
-    
-    console.log('Vehículos para actividad reciente:', vehiculos); // Debug
-    
-    if (vehiculos.length === 0) {
+
+    if (!vehiculos || vehiculos.length === 0) {
         tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No hay vehículos parqueados actualmente</td></tr>';
         return;
     }
 
-    // Mostrar los últimos 5 vehículos
     const recientes = vehiculos.slice(-5).reverse();
     
     tbody.innerHTML = recientes.map(v => `
         <tr>
-            <td><strong>${v.placa}</strong></td>
-            <td><i class="bi ${obtenerIconoVehiculo(v.tipo)}"></i> ${v.tipo}</td>
-            <td>${formatearFecha(v.fechaIngreso)}</td>
-            <td><span class="badge bg-primary">${v.espacio}</span></td>
+            <td><strong>${v.license_plate}</strong></td>
+            <td><i class="bi ${obtenerIconoVehiculo(v.vehicle_type)}"></i> ${v.vehicle_type}</td>
+            <td>${formatearFecha(v.entry_date + ' ' + v.entry_time)}</td>
+            <td><span class="badge bg-primary">${v.parking_space}</span></td>
         </tr>
     `).join('');
 }
 
 // Inicializar dashboard
 document.addEventListener('DOMContentLoaded', function() {
-    // Proteger la página
     protegerPagina();
     
-    // Cargar datos
     actualizarEstadisticas();
     cargarActividadReciente();
     
-    // Actualizar cada 30 segundos
     setInterval(() => {
         actualizarEstadisticas();
         cargarActividadReciente();
     }, 30000);
 });
 
-// Actualizar cuando la página recibe el foco
 window.addEventListener('focus', function() {
     actualizarEstadisticas();
     cargarActividadReciente();
 });
 
-// Actualizar cuando se carga la página (después de navegar)
 window.addEventListener('pageshow', function(event) {
     actualizarEstadisticas();
     cargarActividadReciente();

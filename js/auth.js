@@ -1,42 +1,65 @@
-// auth.js - Manejo de autenticación
+// auth.js - Manejo de autenticación con Supabase
+import { loginUser } from './supabase.js';
+
+// Variable global para usuario actual
+let usuarioActual = null;
 
 // Verificar si existe una sesión activa
 function verificarSesion() {
-    const sesionActiva = localStorage.getItem('sesionActiva');
+    const sesionActiva = sessionStorage.getItem('sesionActiva');
     return sesionActiva === 'true';
 }
 
-// Validar credenciales
-function validarCredenciales(usuario, password) {
-    const usuarios = obtenerDatos('usuarios');
-    if (!usuarios) return null;
-
-    return usuarios.find(u => u.usuario === usuario && u.password === password && u.estado !== 'inactivo');
+// Validar credenciales contra Supabase
+async function validarCredenciales(usuario, password) {
+    try {
+        const result = await loginUser(usuario, password);
+        if (result.success) {
+            return result.user;
+        }
+        return null;
+    } catch (error) {
+        console.error('Error validando credenciales:', error);
+        return null;
+    }
 }
 
 // Iniciar sesión
-function iniciarSesion(usuario, password) {
-    const usuarioValido = validarCredenciales(usuario, password);
-    
-    if (usuarioValido) {
-        localStorage.setItem('sesionActiva', 'true');
-        localStorage.setItem('usuarioActual', JSON.stringify(usuarioValido));
-        return true;
+async function iniciarSesion(usuario, password) {
+    try {
+        const usuarioValido = await validarCredenciales(usuario, password);
+        
+        if (usuarioValido && usuarioValido.estado === 'activo') {
+            sessionStorage.setItem('sesionActiva', 'true');
+            sessionStorage.setItem('usuarioActual', JSON.stringify(usuarioValido));
+            usuarioActual = usuarioValido;
+            return true;
+        }
+        return false;
+    } catch (error) {
+        console.error('Error al iniciar sesión:', error);
+        return false;
     }
-    return false;
 }
 
 // Cerrar sesión
 function cerrarSesion() {
-    localStorage.removeItem('sesionActiva');
-    localStorage.removeItem('usuarioActual');
+    sessionStorage.removeItem('sesionActiva');
+    sessionStorage.removeItem('usuarioActual');
+    usuarioActual = null;
     window.location.href = 'index.html';
 }
 
 // Obtener usuario actual
 function obtenerUsuarioActual() {
-    const usuario = localStorage.getItem('usuarioActual');
-    return usuario ? JSON.parse(usuario) : null;
+    if (usuarioActual) return usuarioActual;
+    
+    const usuario = sessionStorage.getItem('usuarioActual');
+    if (usuario) {
+        usuarioActual = JSON.parse(usuario);
+        return usuarioActual;
+    }
+    return null;
 }
 
 // Mostrar alerta Bootstrap
@@ -61,30 +84,6 @@ function mostrarAlerta(mensaje, tipo = 'danger') {
     }, 5000);
 }
 
-// Manejo del formulario de login
-if (document.getElementById('loginForm')) {
-    // Si ya hay sesión activa, redirigir al dashboard
-    if (verificarSesion()) {
-        window.location.href = 'dashboard.html';
-    }
-
-    document.getElementById('loginForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        const usuario = document.getElementById('username').value;
-        const password = document.getElementById('password').value;
-        
-        if (iniciarSesion(usuario, password)) {
-            mostrarAlerta('Inicio de sesión exitoso. Redirigiendo...', 'success');
-            setTimeout(() => {
-                window.location.href = 'dashboard.html';
-            }, 1000);
-        } else {
-            mostrarAlerta('Usuario o contraseña incorrectos. Por favor, intente nuevamente.');
-        }
-    });
-}
-
 // Proteger páginas que requieren autenticación
 function protegerPagina() {
     if (!verificarSesion() && !window.location.pathname.includes('index.html')) {
@@ -92,8 +91,51 @@ function protegerPagina() {
     }
 }
 
-// Configurar botón de logout si existe
-document.addEventListener('DOMContentLoaded', function() {
+// Manejo del formulario de login
+document.addEventListener('DOMContentLoaded', async function() {
+    const loginForm = document.getElementById('loginForm');
+    
+    // Si ya hay sesión activa, redirigir al dashboard
+    if (verificarSesion()) {
+        window.location.href = 'dashboard.html';
+        return;
+    }
+
+    if (loginForm) {
+        loginForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const usuario = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const submitBtn = loginForm.querySelector('button[type="submit"]');
+            
+            // Deshabilitar botón durante la solicitud
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Verificando...';
+            
+            try {
+                const resultado = await iniciarSesion(usuario, password);
+                
+                if (resultado) {
+                    mostrarAlerta('Inicio de sesión exitoso. Redirigiendo...', 'success');
+                    setTimeout(() => {
+                        window.location.href = 'dashboard.html';
+                    }, 1500);
+                } else {
+                    mostrarAlerta('Usuario o contraseña incorrectos. Por favor, intente nuevamente.');
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<i class="bi bi-box-arrow-in-right"></i> Iniciar Sesión';
+                }
+            } catch (error) {
+                console.error('Error en login:', error);
+                mostrarAlerta('Error en el sistema: ' + error.message);
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="bi bi-box-arrow-in-right"></i> Iniciar Sesión';
+            }
+        });
+    }
+
+    // Configurar botón de logout si existe
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
         logoutBtn.addEventListener('click', function(e) {

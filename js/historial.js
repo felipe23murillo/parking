@@ -1,11 +1,45 @@
 // historial.js - Lógica del historial
+import { getAllHistory, filterHistoryByDateRange } from './supabase.js';
 
 // Proteger la página
 protegerPagina();
 
-// Cargar y mostrar historial
-function cargarHistorial() {
-    const historial = obtenerDatos('historial') || [];
+// Formatear fecha
+function formatearFecha(fecha) {
+    const date = new Date(fecha);
+    return date.toLocaleDateString('es-CO', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
+// Obtener icono por tipo de vehículo
+function obtenerIconoVehiculo(tipo) {
+    const iconos = {
+        'Carro': 'bi-car-front-fill',
+        'Moto': 'bi-scooter',
+        'Camión': 'bi-truck',
+        'Bicicleta': 'bi-bicycle'
+    };
+    return iconos[tipo] || 'bi-question-circle';
+}
+
+// Formatear moneda
+function formatearMoneda(valor) {
+    return new Intl.NumberFormat('es-CO', {
+        style: 'currency',
+        currency: 'COP',
+        minimumFractionDigits: 0
+    }).format(valor);
+}
+
+// Cargar y mostrar historial desde Supabase
+async function cargarHistorial() {
+    const result = await getAllHistory();
+    const historial = result.success ? result.history : [];
     mostrarHistorial(historial);
     calcularEstadisticas(historial);
 }
@@ -14,31 +48,30 @@ function cargarHistorial() {
 function mostrarHistorial(registros) {
     const tbody = document.getElementById('historialTabla');
 
-    if (registros.length === 0) {
+    if (!registros || registros.length === 0) {
         tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No hay registros en el historial</td></tr>';
         return;
     }
 
-    // Ordenar por fecha de salida más reciente
-    const ordenados = [...registros].sort((a, b) => new Date(b.fechaSalida) - new Date(a.fechaSalida));
+    const ordenados = [...registros].sort((a, b) => new Date(b.exit_date) - new Date(a.exit_date));
 
     tbody.innerHTML = ordenados.map(r => `
         <tr>
-            <td><strong>${r.placa}</strong></td>
-            <td><i class="bi ${obtenerIconoVehiculo(r.tipo)}"></i> ${r.tipo}</td>
-            <td><span class="badge bg-secondary">${r.espacio}</span></td>
-            <td><small>${new Date(r.fechaIngreso).toLocaleDateString('es-CO')} ${r.horaIngreso}</small></td>
-            <td>${r.registradoPor || 'Sin usuario'}</td>
-            <td><small>${new Date(r.fechaSalida).toLocaleDateString('es-CO')} ${r.horaSalida}</small></td>
-            <td><span class="badge bg-info">${r.tiempoEstadia}</span></td>
-            <td><strong class="text-success">${formatearMoneda(r.valorPagado)}</strong></td>
+            <td><strong>${r.license_plate}</strong></td>
+            <td><i class="bi ${obtenerIconoVehiculo(r.vehicle_type)}"></i> ${r.vehicle_type}</td>
+            <td><span class="badge bg-secondary">${r.parking_space}</span></td>
+            <td><small>${new Date(r.entry_date).toLocaleDateString('es-CO')} ${r.entry_time}</small></td>
+            <td>${r.user_id || 'Sin usuario'}</td>
+            <td><small>${new Date(r.exit_date).toLocaleDateString('es-CO')} ${r.exit_time}</small></td>
+            <td><span class="badge bg-info">${r.stay_time}h</span></td>
+            <td><strong class="text-success">${formatearMoneda(r.amount_paid)}</strong></td>
         </tr>
     `).join('');
 }
 
 // Calcular estadísticas
 function calcularEstadisticas(registros) {
-    const total = registros.length;
+    const total = registros?.length || 0;
     document.getElementById('totalRegistros').textContent = total;
 
     if (total === 0) {
@@ -48,35 +81,31 @@ function calcularEstadisticas(registros) {
         return;
     }
 
-    // Ingresos totales
-    const ingresos = registros.reduce((sum, r) => sum + (r.valorPagado || 0), 0);
+    const ingresos = registros.reduce((sum, r) => sum + (r.amount_paid || 0), 0);
     document.getElementById('ingresosTotales').textContent = formatearMoneda(ingresos);
+    document.getElementById('promedioVehiculo').textContent = formatearMoneda(ingresos / total);
 
-    // Promedio por vehículo
-    const promedio = ingresos / total;
-    document.getElementById('promedioVehiculo').textContent = formatearMoneda(promedio);
-
-    // Tiempo promedio
-    const tiempoTotal = registros.reduce((sum, r) => sum + (r.totalHoras || 0), 0);
-    const tiempoPromedio = Math.round(tiempoTotal / total);
-    document.getElementById('tiempoPromedio').textContent = `${tiempoPromedio}h`;
+    const tiempoTotal = registros.reduce((sum, r) => sum + (r.stay_time || 0), 0);
+    document.getElementById('tiempoPromedio').textContent = `${Math.round(tiempoTotal / total)}h`;
 }
 
 // Filtrar historial
-function filtrarHistorial() {
+async function filtrarHistorial() {
     const busqueda = document.getElementById('buscarHistorial').value.toLowerCase();
     const tipo = document.getElementById('filtroTipo').value;
     
-    let registros = obtenerDatos('historial') || [];
-
-    // Filtrar por tipo
-    if (tipo) {
-        registros = registros.filter(r => r.tipo === tipo);
+    let registros = [];
+    const result = await getAllHistory();
+    if (result.success) {
+        registros = result.history || [];
     }
 
-    // Filtrar por placa
+    if (tipo) {
+        registros = registros.filter(r => r.vehicle_type === tipo);
+    }
+
     if (busqueda) {
-        registros = registros.filter(r => r.placa.toLowerCase().includes(busqueda));
+        registros = registros.filter(r => r.license_plate.toLowerCase().includes(busqueda));
     }
 
     mostrarHistorial(registros);
@@ -84,22 +113,21 @@ function filtrarHistorial() {
 }
 
 // Exportar historial a CSV
-function exportarHistorial() {
-    const historial = obtenerDatos('historial') || [];
+async function exportarHistorial() {
+    const result = await getAllHistory();
+    const historial = result.success ? result.history : [];
     
-    if (historial.length === 0) {
+    if (!historial || historial.length === 0) {
         alert('No hay datos para exportar');
         return;
     }
 
-    // Crear CSV
     let csv = 'Placa,Tipo,Espacio,Fecha Ingreso,Hora Ingreso,Registrado Por,Fecha Salida,Hora Salida,Tiempo,Valor\n';
     
     historial.forEach(r => {
-        csv += `${r.placa},${r.tipo},${r.espacio},${new Date(r.fechaIngreso).toLocaleDateString('es-CO')},${r.horaIngreso},${r.registradoPor || 'Sin usuario'},${new Date(r.fechaSalida).toLocaleDateString('es-CO')},${r.horaSalida},${r.tiempoEstadia},${r.valorPagado}\n`;
+        csv += `${r.license_plate},${r.vehicle_type},${r.parking_space},${new Date(r.entry_date).toLocaleDateString('es-CO')},${r.entry_time},${r.user_id || 'Sin usuario'},${new Date(r.exit_date).toLocaleDateString('es-CO')},${r.exit_time},${r.stay_time},${r.amount_paid}\n`;
     });
 
-    // Descargar archivo
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
@@ -113,28 +141,12 @@ function exportarHistorial() {
     document.body.removeChild(link);
 }
 
-// Limpiar historial
-function limpiarHistorial() {
-    if (confirm('¿Está seguro de que desea eliminar todo el historial? Esta acción no se puede deshacer.')) {
-        if (confirm('Confirmación final: Se eliminarán todos los registros históricos.')) {
-            guardarDatos('historial', []);
-            cargarHistorial();
-            alert('Historial eliminado exitosamente');
-        }
-    }
-}
-
 // Inicializar página
 document.addEventListener('DOMContentLoaded', function() {
+    protegerPagina();
     cargarHistorial();
 
-    // Eventos de filtros
     document.getElementById('buscarHistorial').addEventListener('input', filtrarHistorial);
     document.getElementById('filtroTipo').addEventListener('change', filtrarHistorial);
-
-    // Botón exportar
     document.getElementById('btnExportar').addEventListener('click', exportarHistorial);
-
-    // Botón limpiar historial
-    document.getElementById('btnLimpiarHistorial').addEventListener('click', limpiarHistorial);
 });

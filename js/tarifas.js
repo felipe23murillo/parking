@@ -1,15 +1,27 @@
 // tarifas.js - Lógica de gestión de tarifas
+import { getAllRates, updateRate } from './supabase.js';
 
 // Proteger la página
 protegerPagina();
 
-function obtenerModalidadTarifa(tarifa) {
-    return tarifa.modalidad || (Number(tarifa.precioFijo) > 0 ? 'fijo' : 'hora');
+// Formatear moneda
+function formatearMoneda(valor) {
+    return new Intl.NumberFormat('es-CO', {
+        style: 'currency',
+        currency: 'COP',
+        minimumFractionDigits: 0
+    }).format(valor);
 }
 
-function obtenerValorTarifa(tarifa) {
-    const modalidad = obtenerModalidadTarifa(tarifa);
-    return modalidad === 'fijo' ? Number(tarifa.precioFijo) || 0 : Number(tarifa.precioHora) || 0;
+// Obtener icono por tipo de vehículo
+function obtenerIconoVehiculo(tipo) {
+    const iconos = {
+        'Carro': 'bi-car-front-fill',
+        'Moto': 'bi-scooter',
+        'Camión': 'bi-truck',
+        'Bicicleta': 'bi-bicycle'
+    };
+    return iconos[tipo] || 'bi-question-circle';
 }
 
 // Mostrar alerta
@@ -27,10 +39,7 @@ function mostrarAlerta(mensaje, tipo = 'danger') {
     
     alertContainer.innerHTML = '';
     alertContainer.appendChild(alertDiv);
-
-    setTimeout(() => {
-        alertDiv.remove();
-    }, 5000);
+    setTimeout(() => alertDiv.remove(), 5000);
 }
 
 function seleccionarTipoVehiculo(tipo) {
@@ -90,19 +99,20 @@ function ocultarEditorTarifa() {
     }
 }
 
-// Cargar y mostrar tarifas actuales
-function cargarTarifasActuales() {
-    const tarifas = obtenerDatos('tarifas') || [];
+// Cargar y mostrar tarifas actuales desde Supabase
+async function cargarTarifasActuales() {
+    const result = await getAllRates();
+    const tarifas = result.success ? result.rates : [];
     const container = document.getElementById('tarifasActuales');
 
-    if (tarifas.length === 0) {
+    if (!tarifas || tarifas.length === 0) {
         container.innerHTML = '<p class="text-muted">No hay tarifas configuradas</p>';
         return;
     }
 
     container.innerHTML = tarifas.map(t => {
-        const modalidad = obtenerModalidadTarifa(t);
-        const valor = obtenerValorTarifa(t);
+        const modalidad = t.fixed_price > 0 ? 'fijo' : 'hora';
+        const valor = modalidad === 'fijo' ? t.fixed_price : t.price_per_hour;
         const precioTexto = modalidad === 'fijo' ? 
             `<span class="text-success">${formatearMoneda(valor)}</span> (Precio fijo)` :
             `<span class="text-primary">${formatearMoneda(valor)}</span> por hora`;
@@ -111,11 +121,11 @@ function cargarTarifasActuales() {
             <div class="d-flex justify-content-between align-items-center mb-3 p-3 border rounded">
                 <div>
                     <h5 class="mb-1">
-                        <i class="bi ${obtenerIconoVehiculo(t.tipo)}"></i> ${t.tipo}
+                        <i class="bi ${obtenerIconoVehiculo(t.vehicle_type)}"></i> ${t.vehicle_type}
                     </h5>
                     <p class="mb-0">${precioTexto}</p>
                 </div>
-                <button class="btn btn-sm btn-outline-primary" onclick="editarTarifa('${t.tipo}')">
+                <button class="btn btn-sm btn-outline-primary" onclick="editarTarifa('${t.vehicle_type}')">
                     <i class="bi bi-pencil"></i> Editar
                 </button>
             </div>
@@ -124,49 +134,23 @@ function cargarTarifasActuales() {
 }
 
 // Editar tarifa (cargar datos en formulario)
-window.editarTarifa = function(tipo) {
-    const tarifas = obtenerDatos('tarifas') || [];
-    const tarifa = tarifas.find(t => t.tipo === tipo);
+window.editarTarifa = async function(tipo) {
+    const result = await getAllRates();
+    const tarifas = result.success ? result.rates : [];
+    const tarifa = tarifas.find(t => t.vehicle_type === tipo);
 
     if (tarifa) {
-        const modalidad = obtenerModalidadTarifa(tarifa);
+        const modalidad = tarifa.fixed_price > 0 ? 'fijo' : 'hora';
 
         mostrarEditorTarifa();
         seleccionarTipoVehiculo(tipo);
-        document.getElementById('precioHora').value = Number(tarifa.precioHora) || 0;
-        document.getElementById('precioFijo').value = Number(tarifa.precioFijo) || 0;
+        document.getElementById('precioHora').value = Number(tarifa.price_per_hour) || 0;
+        document.getElementById('precioFijo').value = Number(tarifa.fixed_price) || 0;
         seleccionarModalidad(modalidad);
 
-        // Scroll al formulario
         document.getElementById('tarifasForm').scrollIntoView({ behavior: 'smooth' });
     }
 };
-
-// Guardar tarifa
-function guardarTarifa(tipo, modalidad, valor) {
-    const tarifas = obtenerDatos('tarifas') || [];
-    
-    // Buscar si existe la tarifa
-    const index = tarifas.findIndex(t => t.tipo === tipo);
-    const valorNumerico = parseInt(valor, 10) || 0;
-
-    const nuevaTarifa = {
-        tipo: tipo,
-        modalidad: modalidad,
-        precioHora: modalidad === 'hora' ? valorNumerico : 0,
-        precioFijo: modalidad === 'fijo' ? valorNumerico : 0
-    };
-
-    if (index !== -1) {
-        // Actualizar tarifa existente
-        tarifas[index] = nuevaTarifa;
-    } else {
-        // Agregar nueva tarifa
-        tarifas.push(nuevaTarifa);
-    }
-
-    return guardarDatos('tarifas', tarifas);
-}
 
 // Inicializar página
 document.addEventListener('DOMContentLoaded', function() {
@@ -185,7 +169,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Manejo del formulario
     const form = document.getElementById('tarifasForm');
-    form.addEventListener('submit', function(e) {
+    form.addEventListener('submit', async function(e) {
         e.preventDefault();
 
         const tipo = document.getElementById('tipoVehiculo').value;
@@ -204,15 +188,29 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        if (guardarTarifa(tipo, modalidad, valor)) {
-            mostrarAlerta(`Tarifa para ${tipo} actualizada exitosamente`, 'success');
-            cargarTarifasActuales();
-            form.reset();
-            document.getElementById('tipoVehiculo').value = '';
-            actualizarCamposModalidad();
-            ocultarEditorTarifa();
+        // Obtener rateId para actualizar
+        const ratesResult = await getAllRates();
+        const tarifas = ratesResult.success ? ratesResult.rates : [];
+        const tarifaExistente = tarifas.find(t => t.vehicle_type === tipo);
+        
+        if (tarifaExistente) {
+            const updateResult = await updateRate(tarifaExistente.id, {
+                price_per_hour: modalidad === 'hora' ? valor : 0,
+                fixed_price: modalidad === 'fijo' ? valor : 0
+            });
+
+            if (updateResult.success) {
+                mostrarAlerta(`Tarifa para ${tipo} actualizada exitosamente`, 'success');
+                cargarTarifasActuales();
+                form.reset();
+                document.getElementById('tipoVehiculo').value = '';
+                actualizarCamposModalidad();
+                ocultarEditorTarifa();
+            } else {
+                mostrarAlerta('Error al guardar la tarifa: ' + updateResult.error, 'danger');
+            }
         } else {
-            mostrarAlerta('Error al guardar la tarifa', 'danger');
+            mostrarAlerta('No se encontró la tarifa para actualizar', 'danger');
         }
     });
 });
