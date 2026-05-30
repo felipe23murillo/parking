@@ -262,8 +262,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 usuario,
                 password,
                 rol,
-                estado,
-                fechaCreacion: new Date().toISOString()
+                estado
             });
         }
 
