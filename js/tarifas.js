@@ -1,9 +1,6 @@
 // tarifas.js - Lógica de gestión de tarifas
 import { getAllRates, updateRate } from './supabase.js';
 
-// Proteger la página
-protegerPagina();
-
 // Formatear moneda
 function formatearMoneda(valor) {
     return new Intl.NumberFormat('es-CO', {

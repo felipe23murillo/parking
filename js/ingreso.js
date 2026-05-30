@@ -1,9 +1,6 @@
 // ingreso.js - Lógica de ingreso de vehículos
 import { getAvailableSpacesByType, getAllRates } from './supabase.js';
 
-// Proteger la página
-protegerPagina();
-
 // Formatear moneda
 function formatearMoneda(valor) {
     return new Intl.NumberFormat('es-CO', {

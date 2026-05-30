@@ -1,9 +1,6 @@
 // historial.js - Lógica del historial
 import { getAllHistory, filterHistoryByDateRange } from './supabase.js';
 
-// Proteger la página
-protegerPagina();
-
 // Formatear fecha
 function formatearFecha(fecha) {
     const date = new Date(fecha);
@@ -38,10 +35,18 @@ function formatearMoneda(valor) {
 
 // Cargar y mostrar historial desde Supabase
 async function cargarHistorial() {
-    const result = await getAllHistory();
-    const historial = result.success ? result.history : [];
-    mostrarHistorial(historial);
-    calcularEstadisticas(historial);
+    try {
+        const result = await getAllHistory();
+        const historial = result.success ? result.history : [];
+        mostrarHistorial(historial);
+        calcularEstadisticas(historial);
+    } catch (error) {
+        console.error('Error cargando historial:', error);
+        const tbody = document.getElementById('historialTabla');
+        if (tbody) {
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center text-danger">Error al cargar el historial</td></tr>';
+        }
+    }
 }
 
 // Mostrar historial en la tabla

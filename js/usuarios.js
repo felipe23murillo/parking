@@ -1,9 +1,6 @@
 // usuarios.js - Gestión de usuarios del sistema
 import { getAllUsers, createUser, updateUser, deleteUser } from './supabase.js';
 
-// Proteger la página
-protegerPagina();
-
 let usuarioEditandoId = null;
 
 // Escapar HTML

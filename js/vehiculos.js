@@ -1,15 +1,29 @@
 // vehiculos.js - Lógica de vehículos parqueados
-import { getAllActiveVehicles } from './supabase.js';
+import { getAllActiveVehicles, searchVehicleByPlate } from './supabase.js';
+
+// Wrapper para buscarVehiculoPorPlaca que espera el formato correcto
+async function buscarVehiculoPorPlaca(placa) {
+    const result = await searchVehicleByPlate(placa);
+    return result.success ? result.vehicle : null;
+}
 
 let vehiculosFiltrados = [];
 
 // Cargar y mostrar vehículos desde Supabase
 async function cargarVehiculos() {
-    const result = await getAllActiveVehicles();
-    const vehiculos = result.success ? result.vehicles : [];
-    vehiculosFiltrados = vehiculos;
-    mostrarVehiculos(vehiculos);
-    document.getElementById('totalVehiculos').textContent = vehiculos.length;
+    try {
+        const result = await getAllActiveVehicles();
+        const vehiculos = result.success ? result.vehicles : [];
+        vehiculosFiltrados = vehiculos;
+        mostrarVehiculos(vehiculos);
+        document.getElementById('totalVehiculos').textContent = vehiculos.length;
+    } catch (error) {
+        console.error('Error cargando vehículos:', error);
+        const tbody = document.getElementById('vehiculosTabla');
+        if (tbody) {
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center text-danger">Error al cargar los vehículos</td></tr>';
+        }
+    }
 }
 
 // Mostrar vehículos en la tabla

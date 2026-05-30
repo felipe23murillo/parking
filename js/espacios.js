@@ -1,30 +1,35 @@
 // espacios.js - Lógica de gestión de espacios
 import { getAllParkingSpaces, updateParkingSpace } from './supabase.js';
 
-// Proteger la página
-protegerPagina();
-
 // Cargar espacios desde Supabase
 async function cargarEspacios() {
-    const result = await getAllParkingSpaces();
-    const espacios = result.success ? result.spaces : [];
+    try {
+        const result = await getAllParkingSpaces();
+        const espacios = result.success ? result.spaces : [];
 
-    // Agrupar por tipo
-    const espaciosPorTipo = {
-        Carro: espacios.filter(e => e.vehicle_type === 'Carro'),
-        Moto: espacios.filter(e => e.vehicle_type === 'Moto'),
-        Camión: espacios.filter(e => e.vehicle_type === 'Camión'),
-        Bicicleta: espacios.filter(e => e.vehicle_type === 'Bicicleta')
-    };
+        // Agrupar por tipo
+        const espaciosPorTipo = {
+            Carro: espacios.filter(e => e.vehicle_type === 'Carro'),
+            Moto: espacios.filter(e => e.vehicle_type === 'Moto'),
+            Camión: espacios.filter(e => e.vehicle_type === 'Camión'),
+            Bicicleta: espacios.filter(e => e.vehicle_type === 'Bicicleta')
+        };
 
-    // Mostrar espacios por tipo
-    mostrarEspaciosPorTipo(espaciosPorTipo.Carro, 'espaciosCarros');
-    mostrarEspaciosPorTipo(espaciosPorTipo.Moto, 'espaciosMotos');
-    mostrarEspaciosPorTipo(espaciosPorTipo.Camión, 'espaciosCamiones');
-    mostrarEspaciosPorTipo(espaciosPorTipo.Bicicleta, 'espaciosBicicletas');
+        // Mostrar espacios por tipo
+        mostrarEspaciosPorTipo(espaciosPorTipo.Carro, 'espaciosCarros');
+        mostrarEspaciosPorTipo(espaciosPorTipo.Moto, 'espaciosMotos');
+        mostrarEspaciosPorTipo(espaciosPorTipo.Camión, 'espaciosCamiones');
+        mostrarEspaciosPorTipo(espaciosPorTipo.Bicicleta, 'espaciosBicicletas');
 
-    // Calcular estadísticas
-    calcularEstadisticas(espacios);
+        // Calcular estadísticas
+        calcularEstadisticas(espacios);
+    } catch (error) {
+        console.error('Error cargando espacios:', error);
+        ['espaciosCarros', 'espaciosMotos', 'espaciosCamiones', 'espaciosBicicletas'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.innerHTML = '<p class="text-danger">Error al cargar los espacios</p>';
+        });
+    }
 }
 
 // Mostrar espacios por tipo

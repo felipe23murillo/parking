@@ -174,4 +174,6 @@ function eliminarDatos(clave) {
 
 // ==================== INICIALIZAR AL CARGAR ====================
 
-inicializarDatos();
+document.addEventListener('DOMContentLoaded', function() {
+    inicializarDatos();
+});

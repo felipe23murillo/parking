@@ -1,16 +1,13 @@
 // auth.js - Manejo de autenticación con Supabase
 import { loginUser } from './supabase.js';
 
-// Variable global para usuario actual
 let usuarioActual = null;
 
-// Verificar si existe una sesión activa
 function verificarSesion() {
     const sesionActiva = sessionStorage.getItem('sesionActiva');
     return sesionActiva === 'true';
 }
 
-// Validar credenciales contra Supabase
 async function validarCredenciales(usuario, password) {
     try {
         const result = await loginUser(usuario, password);
@@ -24,16 +21,18 @@ async function validarCredenciales(usuario, password) {
     }
 }
 
-// Iniciar sesión
 async function iniciarSesion(usuario, password) {
     try {
         const usuarioValido = await validarCredenciales(usuario, password);
         
-        if (usuarioValido && usuarioValido.estado === 'activo') {
-            sessionStorage.setItem('sesionActiva', 'true');
-            sessionStorage.setItem('usuarioActual', JSON.stringify(usuarioValido));
-            usuarioActual = usuarioValido;
-            return true;
+        if (usuarioValido) {
+            const estado = usuarioValido.estado || 'activo';
+            if (estado === 'activo') {
+                sessionStorage.setItem('sesionActiva', 'true');
+                sessionStorage.setItem('usuarioActual', JSON.stringify(usuarioValido));
+                usuarioActual = usuarioValido;
+                return true;
+            }
         }
         return false;
     } catch (error) {
@@ -42,7 +41,6 @@ async function iniciarSesion(usuario, password) {
     }
 }
 
-// Cerrar sesión
 function cerrarSesion() {
     sessionStorage.removeItem('sesionActiva');
     sessionStorage.removeItem('usuarioActual');
@@ -50,7 +48,6 @@ function cerrarSesion() {
     window.location.href = 'index.html';
 }
 
-// Obtener usuario actual
 function obtenerUsuarioActual() {
     if (usuarioActual) return usuarioActual;
     
@@ -62,7 +59,6 @@ function obtenerUsuarioActual() {
     return null;
 }
 
-// Mostrar alerta Bootstrap
 function mostrarAlerta(mensaje, tipo = 'danger') {
     const alertContainer = document.getElementById('alertContainer');
     if (!alertContainer) return;
@@ -77,27 +73,33 @@ function mostrarAlerta(mensaje, tipo = 'danger') {
     
     alertContainer.innerHTML = '';
     alertContainer.appendChild(alertDiv);
-
-    // Auto-cerrar después de 5 segundos
-    setTimeout(() => {
-        alertDiv.remove();
-    }, 5000);
+    setTimeout(() => alertDiv.remove(), 5000);
 }
 
-// Proteger páginas que requieren autenticación
 function protegerPagina() {
     if (!verificarSesion() && !window.location.pathname.includes('index.html')) {
         window.location.href = 'index.html';
     }
 }
 
-// Manejo del formulario de login
+// Hacer funciones disponibles globalmente para otros scripts
+window.verificarSesion = verificarSesion;
+window.protegerPagina = protegerPagina;
+window.obtenerUsuarioActual = obtenerUsuarioActual;
+window.cerrarSesion = cerrarSesion;
+window.mostrarAlerta = mostrarAlerta;
+
 document.addEventListener('DOMContentLoaded', async function() {
     const loginForm = document.getElementById('loginForm');
+    const esPaginaLogin = Boolean(loginForm);
     
-    // Si ya hay sesión activa, redirigir al dashboard
-    if (verificarSesion()) {
+    if (esPaginaLogin && verificarSesion()) {
         window.location.href = 'dashboard.html';
+        return;
+    }
+
+    if (!esPaginaLogin && !verificarSesion()) {
+        window.location.href = 'index.html';
         return;
     }
 
@@ -109,12 +111,12 @@ document.addEventListener('DOMContentLoaded', async function() {
             const password = document.getElementById('password').value;
             const submitBtn = loginForm.querySelector('button[type="submit"]');
             
-            // Deshabilitar botón durante la solicitud
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Verificando...';
             
             try {
                 const resultado = await iniciarSesion(usuario, password);
+                console.log('Resultado login:', resultado);
                 
                 if (resultado) {
                     mostrarAlerta('Inicio de sesión exitoso. Redirigiendo...', 'success');
@@ -122,20 +124,19 @@ document.addEventListener('DOMContentLoaded', async function() {
                         window.location.href = 'dashboard.html';
                     }, 1500);
                 } else {
-                    mostrarAlerta('Usuario o contraseña incorrectos. Por favor, intente nuevamente.');
+                    mostrarAlerta('Usuario o contraseña incorrectos. Por favor, intente nuevamente.', 'danger');
                     submitBtn.disabled = false;
                     submitBtn.innerHTML = '<i class="bi bi-box-arrow-in-right"></i> Iniciar Sesión';
                 }
             } catch (error) {
                 console.error('Error en login:', error);
-                mostrarAlerta('Error en el sistema: ' + error.message);
+                mostrarAlerta('Error en el sistema: ' + error.message, 'danger');
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = '<i class="bi bi-box-arrow-in-right"></i> Iniciar Sesión';
             }
         });
     }
 
-    // Configurar botón de logout si existe
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
         logoutBtn.addEventListener('click', function(e) {
@@ -146,7 +147,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         });
     }
 
-    // Mostrar nombre de usuario si existe
     const userName = document.getElementById('userName');
     if (userName) {
         const usuario = obtenerUsuarioActual();
@@ -155,7 +155,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     }
 
-    // Toggle sidebar
     const sidebarToggle = document.getElementById('sidebarToggle');
     const sidebar = document.getElementById('sidebar');
     if (sidebarToggle && sidebar) {

@@ -26,46 +26,58 @@ function obtenerIconoVehiculo(tipo) {
 
 // Actualizar estadísticas
 async function actualizarEstadisticas() {
-    const result = await getAllActiveVehicles();
-    const vehiculos = result.success ? result.vehicles : [];
-    
-    const conteo = {
-        Carro: vehiculos.filter(v => v.vehicle_type === 'Carro').length,
-        Moto: vehiculos.filter(v => v.vehicle_type === 'Moto').length,
-        Camión: vehiculos.filter(v => v.vehicle_type === 'Camión').length,
-        Bicicleta: vehiculos.filter(v => v.vehicle_type === 'Bicicleta').length
-    };
+    try {
+        const result = await getAllActiveVehicles();
+        const vehiculos = result.success ? result.vehicles : [];
+        
+        const conteo = {
+            Carro: vehiculos.filter(v => v.vehicle_type === 'Carro').length,
+            Moto: vehiculos.filter(v => v.vehicle_type === 'Moto').length,
+            Camión: vehiculos.filter(v => v.vehicle_type === 'Camión').length,
+            Bicicleta: vehiculos.filter(v => v.vehicle_type === 'Bicicleta').length
+        };
 
-    document.getElementById('totalCarros').textContent = conteo.Carro;
-    document.getElementById('totalMotos').textContent = conteo.Moto;
-    document.getElementById('totalCamiones').textContent = conteo.Camión;
-    document.getElementById('totalBicicletas').textContent = conteo.Bicicleta;
-    
-    const total = conteo.Carro + conteo.Moto + conteo.Camión + conteo.Bicicleta;
-    document.getElementById('totalVehiculos').textContent = total;
+        document.getElementById('totalCarros').textContent = conteo.Carro;
+        document.getElementById('totalMotos').textContent = conteo.Moto;
+        document.getElementById('totalCamiones').textContent = conteo.Camión;
+        document.getElementById('totalBicicletas').textContent = conteo.Bicicleta;
+        
+        const total = conteo.Carro + conteo.Moto + conteo.Camión + conteo.Bicicleta;
+        document.getElementById('totalVehiculos').textContent = total;
+    } catch (error) {
+        console.error('Error actualizando estadísticas:', error);
+    }
 }
 
 // Cargar actividad reciente
 async function cargarActividadReciente() {
-    const result = await getAllActiveVehicles();
-    const vehiculos = result.success ? result.vehicles : [];
-    const tbody = document.getElementById('actividadReciente');
+    try {
+        const result = await getAllActiveVehicles();
+        const vehiculos = result.success ? result.vehicles : [];
+        const tbody = document.getElementById('actividadReciente');
 
-    if (!vehiculos || vehiculos.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No hay vehículos parqueados actualmente</td></tr>';
-        return;
+        if (!vehiculos || vehiculos.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No hay vehículos parqueados actualmente</td></tr>';
+            return;
+        }
+
+        const recientes = vehiculos.slice(-5).reverse();
+        
+        tbody.innerHTML = recientes.map(v => `
+            <tr>
+                <td><strong>${v.license_plate}</strong></td>
+                <td><i class="bi ${obtenerIconoVehiculo(v.vehicle_type)}"></i> ${v.vehicle_type}</td>
+                <td>${formatearFecha(v.entry_date + ' ' + v.entry_time)}</td>
+                <td><span class="badge bg-primary">${v.parking_space}</span></td>
+            </tr>
+        `).join('');
+    } catch (error) {
+        console.error('Error cargando actividad reciente:', error);
+        const tbody = document.getElementById('actividadReciente');
+        if (tbody) {
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center text-danger">Error al cargar la actividad</td></tr>';
+        }
     }
-
-    const recientes = vehiculos.slice(-5).reverse();
-    
-    tbody.innerHTML = recientes.map(v => `
-        <tr>
-            <td><strong>${v.license_plate}</strong></td>
-            <td><i class="bi ${obtenerIconoVehiculo(v.vehicle_type)}"></i> ${v.vehicle_type}</td>
-            <td>${formatearFecha(v.entry_date + ' ' + v.entry_time)}</td>
-            <td><span class="badge bg-primary">${v.parking_space}</span></td>
-        </tr>
-    `).join('');
 }
 
 // Inicializar dashboard

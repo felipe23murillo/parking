@@ -1,9 +1,93 @@
 // salida.js - Lógica de salida de vehículos
-
-// Proteger la página
-protegerPagina();
+import { getAllActiveVehicles, searchVehicleByPlate, getAllRates, getAllParkingSpaces, registerVehicleExit, removeActiveVehicle, updateParkingSpace, getSettings } from './supabase.js';
 
 let vehiculoActual = null;
+
+// Wrapper para formatearMoneda y formatearFecha
+function formatearMoneda(valor) {
+    return new Intl.NumberFormat('es-CO', {
+        style: 'currency',
+        currency: 'COP',
+        minimumFractionDigits: 0
+    }).format(valor);
+}
+
+function formatearFecha(fecha) {
+    const date = new Date(fecha);
+    return date.toLocaleDateString('es-CO', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
+// Wrapper para buscarVehiculoPorPlaca
+async function buscarVehiculoPorPlaca(placa) {
+    const result = await searchVehicleByPlate(placa);
+    return result.success ? { vehicle: result.vehicle } : null;
+}
+
+// Wrapper para calcularTiempoEstadia
+function calcularTiempoEstadia(fechaIngreso) {
+    const ingreso = new Date(fechaIngreso);
+    const salida = new Date();
+    const diferencia = salida - ingreso;
+    return Math.ceil(diferencia / (1000 * 60 * 60));
+}
+
+// Wrapper para calcularTarifa
+async function calcularTarifa(tipo, tiempoEstadia) {
+    try {
+        const tarifas = await getAllRates();
+        if (!tarifas.success) return 0;
+        const tarifa = tarifas.rates.find(t => t.vehicle_type === tipo);
+        if (!tarifa) return 0;
+        if (tarifa.fixed_price > 0) return tarifa.fixed_price;
+        return tarifa.price_per_hour * tiempoEstadia;
+    } catch (error) {
+        return 0;
+    }
+}
+
+// Wrapper para registrarSalida
+async function registrarSalida(vehiculo, userId) {
+    try {
+        const tiempoEstadia = calcularTiempoEstadia(`${vehiculo.entry_date} ${vehiculo.entry_time}`);
+        const tarifa = await calcularTarifa(vehiculo.vehicle_type, tiempoEstadia);
+        
+        const historialData = {
+            license_plate: vehiculo.license_plate,
+            vehicle_type: vehiculo.vehicle_type,
+            parking_space: vehiculo.parking_space,
+            entry_date: vehiculo.entry_date,
+            entry_time: vehiculo.entry_time,
+            exit_date: new Date().toISOString().split('T')[0],
+            exit_time: new Date().toTimeString().split(' ')[0],
+            stay_time: tiempoEstadia,
+            amount_paid: tarifa,
+            user_id: userId
+        };
+        
+        const historialResult = await registerVehicleExit(historialData);
+        if (historialResult.success) {
+            await removeActiveVehicle(vehiculo.id);
+            
+            const espaciosResult = await getAllParkingSpaces();
+            const espacios = espaciosResult.success ? espaciosResult.spaces : [];
+            const espacio = espacios.find(e => e.space_number === vehiculo.parking_space && e.vehicle_type === vehiculo.vehicle_type);
+            if (espacio) {
+                await updateParkingSpace(espacio.id, { is_occupied: false, license_plate: null });
+            }
+            
+            return { exito: true, mensaje: 'Salida registrada exitosamente', historial: historialResult.history, tiempoEstadia, tarifa };
+        }
+        return { exito: false, mensaje: 'Error al registrar la salida' };
+    } catch (error) {
+        return { exito: false, mensaje: 'Error del sistema: ' + error.message };
+    }
+}
 
 // Mostrar alerta
 function mostrarAlerta(mensaje, tipo = 'danger') {
@@ -96,6 +180,7 @@ function ocultarInfoVehiculo() {
 
 // Inicializar página
 document.addEventListener('DOMContentLoaded', function() {
+    protegerPagina();
     cargarVehiculosActivos();
 
     // Formulario de búsqueda
@@ -132,18 +217,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 ocultarInfoVehiculo();
                 cargarVehiculosActivos();
 
-                setTimeout(() => {
-                    mostrarTicketPago({
-                        placa: vehiculoActual.license_plate,
-                        tipo: vehiculoActual.vehicle_type,
-                        espacio: vehiculoActual.parking_space,
-                        fechaIngreso: vehiculoActual.entry_date,
-                        horaIngreso: vehiculoActual.entry_time,
-                        fechaSalida: resultado.historial?.exit_date,
-                        tiempoEstadia: resultado.tiempoEstadia,
-                        valorPagado: resultado.tarifa
-                    });
-                }, 1000);
+setTimeout(async () => {
+                     await mostrarTicketPago({
+                         license_plate: vehiculoActual.license_plate,
+                         vehicle_type: vehiculoActual.vehicle_type,
+                         parking_space: vehiculoActual.parking_space,
+                         entry_date: vehiculoActual.entry_date,
+                         entry_time: vehiculoActual.entry_time,
+                         exit_date: resultado.historial?.exit_date,
+                         tiempoEstadia: resultado.tiempoEstadia,
+                         valorPagado: resultado.tarifa
+                     });
+                 }, 1000);
             } else {
                 mostrarAlerta(resultado.mensaje, 'danger');
             }
@@ -157,9 +242,19 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
+// Obtener configuración (función wrapper para storage)
+async function obtenerConfiguracion() {
+    try {
+        const result = await getSettings();
+        return result.success ? result.settings : {};
+    } catch (error) {
+        return {};
+    }
+}
+
 // Mostrar ticket de pago
-function mostrarTicketPago(vehiculo) {
-    const configuracion = obtenerDatos('configuracion');
+async function mostrarTicketPago(vehiculo) {
+    const configuracion = await obtenerConfiguracion();
     const modal = document.createElement('div');
     modal.className = 'modal fade';
     modal.innerHTML = `
@@ -170,13 +265,13 @@ function mostrarTicketPago(vehiculo) {
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body text-center">
-                    <h3 class="mb-3">${configuracion?.nombreParqueadero || 'Parqueadero Central'}</h3>
+                    <h3 class="mb-3">${configuracion?.parking_name || 'Parqueadero Central'}</h3>
                     <hr>
-                    <p><strong>Placa:</strong> ${vehiculo.placa}</p>
-                    <p><strong>Tipo:</strong> ${vehiculo.tipo}</p>
-                    <p><strong>Espacio:</strong> ${vehiculo.espacio}</p>
+                    <p><strong>Placa:</strong> ${vehiculo.license_plate}</p>
+                    <p><strong>Tipo:</strong> ${vehiculo.vehicle_type}</p>
+                    <p><strong>Espacio:</strong> ${vehiculo.parking_space}</p>
                     <hr>
-                    <p><strong>Ingreso:</strong> ${formatearFecha(vehiculo.fechaIngreso)}</p>
+                    <p><strong>Ingreso:</strong> ${formatearFecha(vehiculo.entry_date)}</p>
                     <p><strong>Salida:</strong> ${formatearFecha(new Date())}</p>
                     <p><strong>Tiempo:</strong> ${vehiculo.tiempoEstadia} hora(s)</p>
                     <hr>

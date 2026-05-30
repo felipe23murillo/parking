@@ -1,5 +1,5 @@
-// Importar Supabase
-import { createClient } from '@supabase/supabase-js';
+// Importar Supabase desde CDN para uso directo en el navegador
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
 // Obtener variables de entorno
 const SUPABASE_URL = 'https://kmksucshpldaczhjgspn.supabase.co';
@@ -22,8 +22,8 @@ export async function loginUser(usuario, password) {
       .eq('password', password)
       .single();
 
-    if (error) throw error;
-    return { success: true, user: data };
+    if (error && error.code !== 'PGRST116') throw error;
+    return { success: !!data, user: data || null };
   } catch (error) {
     console.error('Error en login:', error);
     return { success: false, error: error.message };

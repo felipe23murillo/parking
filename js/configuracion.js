@@ -1,9 +1,6 @@
 // configuracion.js - Lógica de configuración del sistema
 import { getSettings, updateSettings, getAllActiveVehicles, getAllHistory, getAllRates, getAllUsers, getAllParkingSpaces } from './supabase.js';
 
-// Proteger la página
-protegerPagina();
-
 // Mostrar alerta
 function mostrarAlerta(mensaje, tipo = 'danger') {
     const alertContainer = document.getElementById('alertContainer');
