@@ -96,14 +96,65 @@
         <div class="main-content">
             <div class="container-fluid py-4">
                 <div class="row mb-3">
+                    <div class="col-12 d-flex justify-content-between align-items-start flex-wrap gap-2">
+                        <div>
+                            <h1><i class="bi bi-grid-3x3"></i> Gestión de Espacios</h1>
+                            <nav aria-label="breadcrumb">
+                                <ol class="breadcrumb">
+                                    <li class="breadcrumb-item"><a href="dashboard.html">Dashboard</a></li>
+                                    <li class="breadcrumb-item active">Espacios</li>
+                                </ol>
+                            </nav>
+                        </div>
+                        <button class="btn btn-outline-primary" id="btnRecargarEspacios">
+                            <i class="bi bi-arrow-clockwise"></i> Recargar
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Panel de configuración -->
+                <div class="row mb-4">
                     <div class="col-12">
-                        <h1><i class="bi bi-grid-3x3"></i> Gestión de Espacios</h1>
-                        <nav aria-label="breadcrumb">
-                            <ol class="breadcrumb">
-                                <li class="breadcrumb-item"><a href="dashboard.html">Dashboard</a></li>
-                                <li class="breadcrumb-item active">Espacios</li>
-                            </ol>
-                        </nav>
+                        <div class="card border-primary">
+                            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center"
+                                 style="cursor:pointer;" data-bs-toggle="collapse" data-bs-target="#panelConfiguracion"
+                                 aria-expanded="false" aria-controls="panelConfiguracion">
+                                <h5 class="mb-0">
+                                    <i class="bi bi-gear-fill me-2"></i>Configurar cantidad de espacios
+                                </h5>
+                                <i class="bi bi-chevron-down" id="iconoConfiguracion"></i>
+                            </div>
+                            <div class="collapse" id="panelConfiguracion">
+                                <div class="card-body">
+                                    <p class="text-muted small mb-3">
+                                        <i class="bi bi-info-circle me-1"></i>
+                                        Defina cuántos espacios existen para cada tipo de vehículo.
+                                        Al reducir, sólo se eliminarán espacios que estén <strong>libres</strong>.
+                                    </p>
+
+                                    <div id="alertConfiguracion"></div>
+
+                                    <form id="formConfiguracion" novalidate>
+                                        <div class="row g-3" id="filasTipos">
+                                            <!-- Generado por JS -->
+                                            <div class="col-12 text-center text-muted py-3">
+                                                <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                                                Cargando configuración actual...
+                                            </div>
+                                        </div>
+
+                                        <div class="mt-4 d-flex gap-2">
+                                            <button type="submit" class="btn btn-primary" id="btnGuardarConfig">
+                                                <i class="bi bi-check-circle me-1"></i>Aplicar configuración
+                                            </button>
+                                            <button type="button" class="btn btn-outline-secondary" id="btnCancelarConfig">
+                                                <i class="bi bi-x-circle me-1"></i>Cancelar
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 

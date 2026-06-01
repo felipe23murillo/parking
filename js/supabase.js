@@ -37,10 +37,10 @@ export async function getAllUsers() {
   try {
     const { data, error } = await supabase.from('users').select('*');
     if (error) throw error;
-    return { success: true, users: data };
+    return { success: true, users: data || [] };
   } catch (error) {
     console.error('Error obteniendo usuarios:', error);
-    return { success: false, error: error.message };
+    return { success: false, users: [], error: error.message };
   }
 }
 
@@ -102,12 +102,12 @@ export async function deleteUser(userId) {
  */
 export async function getAllActiveVehicles() {
   try {
-    const { data, error } = await supabase.from('vehicles_active').select('*');
+    const { data, error } = await supabase.from('vehicles_active').select('*').order('entry_date', { ascending: false });
     if (error) throw error;
-    return { success: true, vehicles: data };
+    return { success: true, vehicles: data || [] };
   } catch (error) {
     console.error('Error obteniendo vehículos:', error);
-    return { success: false, error: error.message };
+    return { success: false, vehicles: [], error: error.message };
   }
 }
 
@@ -173,12 +173,12 @@ export async function removeActiveVehicle(vehicleId) {
  */
 export async function getAllParkingSpaces() {
   try {
-    const { data, error } = await supabase.from('parking_spaces').select('*');
+    const { data, error } = await supabase.from('parking_spaces').select('*').order('space_number', { ascending: true });
     if (error) throw error;
-    return { success: true, spaces: data };
+    return { success: true, spaces: data || [] };
   } catch (error) {
     console.error('Error obteniendo espacios:', error);
-    return { success: false, error: error.message };
+    return { success: false, spaces: [], error: error.message };
   }
 }
 
@@ -191,12 +191,49 @@ export async function getAvailableSpacesByType(vehicleType) {
       .from('parking_spaces')
       .select('*')
       .eq('vehicle_type', vehicleType)
-      .eq('is_occupied', false);
+      .eq('is_occupied', false)
+      .order('space_number', { ascending: true });
 
     if (error) throw error;
-    return { success: true, spaces: data };
+    return { success: true, spaces: data || [] };
   } catch (error) {
     console.error('Error obteniendo espacios disponibles:', error);
+    return { success: false, spaces: [], error: error.message };
+  }
+}
+
+/**
+ * Crear un nuevo espacio de parqueo
+ */
+export async function createParkingSpace(spaceData) {
+  try {
+    const { data, error } = await supabase
+      .from('parking_spaces')
+      .insert([spaceData])
+      .select();
+
+    if (error) throw error;
+    return { success: true, space: data[0] };
+  } catch (error) {
+    console.error('Error creando espacio:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Eliminar un espacio de parqueo
+ */
+export async function deleteParkingSpace(spaceId) {
+  try {
+    const { error } = await supabase
+      .from('parking_spaces')
+      .delete()
+      .eq('id', spaceId);
+
+    if (error) throw error;
+    return { success: true };
+  } catch (error) {
+    console.error('Error eliminando espacio:', error);
     return { success: false, error: error.message };
   }
 }
@@ -227,12 +264,15 @@ export async function updateParkingSpace(spaceId, spaceData) {
  */
 export async function getAllHistory() {
   try {
-    const { data, error } = await supabase.from('history_movements').select('*');
+    const { data, error } = await supabase
+      .from('history_movements')
+      .select('*')
+      .order('exit_date', { ascending: false });
     if (error) throw error;
-    return { success: true, history: data };
+    return { success: true, history: data || [] };
   } catch (error) {
     console.error('Error obteniendo historial:', error);
-    return { success: false, error: error.message };
+    return { success: false, history: [], error: error.message };
   }
 }
 
@@ -282,10 +322,10 @@ export async function getAllRates() {
   try {
     const { data, error } = await supabase.from('rates').select('*');
     if (error) throw error;
-    return { success: true, rates: data };
+    return { success: true, rates: data || [] };
   } catch (error) {
     console.error('Error obteniendo tarifas:', error);
-    return { success: false, error: error.message };
+    return { success: false, rates: [], error: error.message };
   }
 }
 

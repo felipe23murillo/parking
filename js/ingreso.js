@@ -107,6 +107,8 @@ function mostrarAlerta(mensaje, tipo = 'danger') {
 
 // Inicializar página
 document.addEventListener('DOMContentLoaded', function() {
+    if (typeof protegerPagina === 'function') protegerPagina();
+
     actualizarFechaHora();
     actualizarContadorEspacios();
     mostrarTarifas();
@@ -135,6 +137,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (!placa || !tipo || !espacio) {
             mostrarAlerta('Por favor complete todos los campos obligatorios', 'warning');
+            return;
+        }
+
+        // Validación básica de placa (3 letras + 3 números, o 3 letras + 2 números + 1 letra)
+        const regexPlaca = /^[A-Z]{3}[0-9]{2,3}[A-Z0-9]$/;
+        if (!regexPlaca.test(placa)) {
+            mostrarAlerta('Formato de placa no válido. Ejemplo: ABC123 o ABC12D', 'warning');
             return;
         }
 

@@ -144,14 +144,14 @@
                 </div>
 
                 <!-- Filtros -->
-                <div class="row mb-3">
+                <div class="row mb-3 g-2">
                     <div class="col-md-4">
                         <div class="input-group">
                             <span class="input-group-text"><i class="bi bi-search"></i></span>
                             <input type="text" class="form-control" id="buscarHistorial" placeholder="Buscar por placa...">
                         </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <select class="form-select" id="filtroTipo">
                             <option value="">Todos los tipos</option>
                             <option value="Carro">Carros</option>
@@ -161,13 +161,19 @@
                         </select>
                     </div>
                     <div class="col-md-2">
-                        <button class="btn btn-outline-primary w-100" id="btnExportar">
-                            <i class="bi bi-download"></i> Exportar
+                        <input type="date" class="form-control" id="fechaInicio" title="Fecha inicio">
+                    </div>
+                    <div class="col-md-2">
+                        <input type="date" class="form-control" id="fechaFin" title="Fecha fin">
+                    </div>
+                    <div class="col-md-1">
+                        <button class="btn btn-outline-secondary w-100" id="btnLimpiarFiltros" title="Limpiar filtros">
+                            <i class="bi bi-x-circle"></i>
                         </button>
                     </div>
-                    <div class="col-md-3">
-                        <button class="btn btn-outline-danger w-100" id="btnLimpiarHistorial">
-                            <i class="bi bi-trash"></i> Limpiar Historial
+                    <div class="col-md-1">
+                        <button class="btn btn-outline-primary w-100" id="btnExportar" title="Exportar CSV">
+                            <i class="bi bi-download"></i>
                         </button>
                     </div>
                 </div>

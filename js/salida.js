@@ -29,12 +29,21 @@ async function buscarVehiculoPorPlaca(placa) {
     return result.success ? { vehicle: result.vehicle } : null;
 }
 
-// Wrapper para calcularTiempoEstadia
-function calcularTiempoEstadia(fechaIngreso) {
-    const ingreso = new Date(fechaIngreso);
-    const salida = new Date();
-    const diferencia = salida - ingreso;
-    return Math.ceil(diferencia / (1000 * 60 * 60));
+function fechaLocalHoy() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function horaLocalAhora() {
+    const d = new Date();
+    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`;
+}
+
+// Usa separador 'T' para parsear como hora local (no UTC)
+function calcularTiempoEstadia(fecha, hora) {
+    const ingreso = new Date(`${fecha}T${hora}`);
+    const diferencia = Date.now() - ingreso.getTime();
+    return Math.max(1, Math.ceil(diferencia / (1000 * 60 * 60)));
 }
 
 // Wrapper para calcularTarifa
@@ -54,7 +63,7 @@ async function calcularTarifa(tipo, tiempoEstadia) {
 // Wrapper para registrarSalida
 async function registrarSalida(vehiculo, userId) {
     try {
-        const tiempoEstadia = calcularTiempoEstadia(`${vehiculo.entry_date} ${vehiculo.entry_time}`);
+        const tiempoEstadia = calcularTiempoEstadia(vehiculo.entry_date, vehiculo.entry_time);
         const tarifa = await calcularTarifa(vehiculo.vehicle_type, tiempoEstadia);
         
         const historialData = {
@@ -63,8 +72,8 @@ async function registrarSalida(vehiculo, userId) {
             parking_space: vehiculo.parking_space,
             entry_date: vehiculo.entry_date,
             entry_time: vehiculo.entry_time,
-            exit_date: new Date().toISOString().split('T')[0],
-            exit_time: new Date().toTimeString().split(' ')[0],
+            exit_date: fechaLocalHoy(),
+            exit_time: horaLocalAhora(),
             stay_time: tiempoEstadia,
             amount_paid: tarifa,
             user_id: userId
@@ -162,7 +171,7 @@ function mostrarInfoVehiculo(vehiculo) {
     document.getElementById('infoFechaIngreso').textContent = formatearFecha(vehiculo.entry_date);
     document.getElementById('infoHoraIngreso').textContent = vehiculo.entry_time;
 
-    const tiempo = calcularTiempoEstadia(`${vehiculo.entry_date} ${vehiculo.entry_time}`);
+    const tiempo = calcularTiempoEstadia(vehiculo.entry_date, vehiculo.entry_time);
     document.getElementById('tiempoParqueado').textContent = `${tiempo} hora(s)`;
 
     calcularTarifa(vehiculo.vehicle_type, tiempo).then(valor => {
@@ -200,14 +209,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (confirm('¿Está seguro de registrar la salida de este vehículo?')) {
             const usuario = obtenerUsuarioActual();
-            const resultado = await registrarSalida(vehiculoActual, usuario?.id);
+            // Capturar datos ANTES de que ocultarInfoVehiculo() limpie vehiculoActual
+            const datosVehiculo = { ...vehiculoActual };
+            const resultado = await registrarSalida(datosVehiculo, usuario?.id);
 
             if (resultado.exito) {
                 const valor = formatearMoneda(resultado.tarifa);
-                
+
                 mostrarAlerta(
                     `Salida registrada exitosamente<br>
-                    <strong>Placa:</strong> ${vehiculoActual.license_plate}<br>
+                    <strong>Placa:</strong> ${datosVehiculo.license_plate}<br>
                     <strong>Tiempo:</strong> ${resultado.tiempoEstadia} hora(s)<br>
                     <strong>Total a pagar:</strong> ${valor}`,
                     'success'
@@ -217,18 +228,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 ocultarInfoVehiculo();
                 cargarVehiculosActivos();
 
-setTimeout(async () => {
-                     await mostrarTicketPago({
-                         license_plate: vehiculoActual.license_plate,
-                         vehicle_type: vehiculoActual.vehicle_type,
-                         parking_space: vehiculoActual.parking_space,
-                         entry_date: vehiculoActual.entry_date,
-                         entry_time: vehiculoActual.entry_time,
-                         exit_date: resultado.historial?.exit_date,
-                         tiempoEstadia: resultado.tiempoEstadia,
-                         valorPagado: resultado.tarifa
-                     });
-                 }, 1000);
+                setTimeout(async () => {
+                    await mostrarTicketPago({
+                        license_plate: datosVehiculo.license_plate,
+                        vehicle_type:  datosVehiculo.vehicle_type,
+                        parking_space: datosVehiculo.parking_space,
+                        entry_date:    datosVehiculo.entry_date,
+                        entry_time:    datosVehiculo.entry_time,
+                        exit_date:     resultado.historial?.exit_date,
+                        tiempoEstadia: resultado.tiempoEstadia,
+                        valorPagado:   resultado.tarifa
+                    });
+                }, 1000);
             } else {
                 mostrarAlerta(resultado.mensaje, 'danger');
             }

@@ -108,8 +108,8 @@ async function registrarIngreso(placa, tipo, espacio, userId) {
             license_plate: placa.toUpperCase(),
             vehicle_type: tipo,
             parking_space: espacio,
-            entry_date: new Date().toISOString().split('T')[0],
-            entry_time: new Date().toTimeString().split(' ')[0],
+            entry_date: fechaLocalHoy(),
+            entry_time: horaLocalAhora(),
             user_id: userId
         };
 
@@ -132,12 +132,24 @@ async function buscarVehiculo(placa) {
     return result;
 }
 
+// Devuelve la fecha local actual en formato YYYY-MM-DD (sin zona horaria)
+function fechaLocalHoy() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+// Devuelve la hora local actual en formato HH:mm:ss
+function horaLocalAhora() {
+    const d = new Date();
+    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`;
+}
+
 // Calcular tiempo de estadía (en horas)
-function calcularTiempoEstadia(fechaIngreso) {
-    const ingreso = new Date(fechaIngreso);
-    const salida = new Date();
-    const diferencia = salida - ingreso;
-    return Math.ceil(diferencia / (1000 * 60 * 60)); // Convertir a horas
+// Usa separador 'T' para que new Date() parsee como hora LOCAL, no UTC
+function calcularTiempoEstadia(fecha, hora) {
+    const ingreso = new Date(`${fecha}T${hora}`);
+    const diferencia = Date.now() - ingreso.getTime();
+    return Math.max(1, Math.ceil(diferencia / (1000 * 60 * 60)));
 }
 
 // Calcular tarifa
@@ -168,7 +180,7 @@ async function registrarSalida(vehiculo, userId) {
             return { exito: false, mensaje: 'Vehículo no encontrado' };
         }
 
-        const tiempoEstadia = calcularTiempoEstadia(vehiculoEncontrado.entry_date + ' ' + vehiculoEncontrado.entry_time);
+        const tiempoEstadia = calcularTiempoEstadia(vehiculoEncontrado.entry_date, vehiculoEncontrado.entry_time);
         const tarifa = await calcularTarifa(vehiculoEncontrado.vehicle_type, tiempoEstadia);
 
         const datosHistorial = {
@@ -177,8 +189,8 @@ async function registrarSalida(vehiculo, userId) {
             parking_space: vehiculoEncontrado.parking_space,
             entry_date: vehiculoEncontrado.entry_date,
             entry_time: vehiculoEncontrado.entry_time,
-            exit_date: new Date().toISOString().split('T')[0],
-            exit_time: new Date().toTimeString().split(' ')[0],
+            exit_date: fechaLocalHoy(),
+            exit_time: horaLocalAhora(),
             stay_time: tiempoEstadia,
             amount_paid: tarifa,
             user_id: userId
